@@ -1,0 +1,116 @@
+body {
+	background-color: #E5E5E5;
+}
+/*
+#TargetButtons, #PixelSelection {
+    background-color: black;
+    border: none;
+    color: white;
+    padding: 10px 10px;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+    float: right;
+}
+*/
+
+td,tr {
+	vertical-align: bottom;
+	padding: 7px;
+}
+table {
+	float: right;
+	padding: 0px 0px;
+}
+
+#ProbeDropLoc, #SelectVerticies, #PointTarget {
+	background-color: white;
+	color: black;
+	padding: 9px 9px;
+	display: inline-block;
+	font-size: 14px;
+	float: right;
+	border: 1px solid;
+	border-color: gray;
+	border-radius: 4px;
+}
+
+#Compute {
+	background-color: #00cc00;
+	color: white;
+	padding: 10px 10px;
+	display: inline-block;
+	font-size: 16px;
+	float: right;
+	border: 1px solid;
+	border-color: black;
+	border-radius: 4px;
+}
+
+#Clear {
+	background-color: orange;
+	color: white;
+	padding: 7px 7px;
+	display: inline-block;
+	font-size: 14px;
+	float: right;
+	border: 1px solid;
+	border-color: black;
+	border-radius: 4px;
+}
+
+#NoTarget {
+	background-color: #ff0000;
+	color: white;
+	padding: 6px 6px;
+	font-size: 12px;
+	float: right;
+	border: 1px solid;
+	border-color: black;
+	border-radius: 4px;
+}
+
+#Process {
+	background-color: blue;
+	color: white;
+	padding: 7px 7px;
+	font-size: 14px;
+	float: right;
+	border:1px solid;
+	border-color: black;
+	border-radius: 4px;
+}
+
+#Load {
+	background-color: black;
+	color: white;
+	padding: 9px 9px;
+	font-size: 14px;
+	float:right;
+	border: 1px solid;
+	border-color: black;
+	border-radius: 4px;
+}
+
+#ProbeDropLoc:active, #SelectVerticies:active, #PointTarget:active {
+	background-color: #00cc00;
+}
+#Compute:hover, #Clear:hover {
+	background-color: gray;
+}
+#Compute:active {
+	background-color: #00cc00;
+}
+#Clear:active {
+	background-color: orange;
+}
+#NoTarget:hover {
+	background-color: black;
+	color: red;
+}
+#Load:hover {
+	background-color: purple;
+}
+#Load:active {
+	background-color: black;
+}
