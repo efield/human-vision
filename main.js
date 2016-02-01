@@ -56,32 +56,47 @@ fs.rename("C:/Users/Eric/human-vision/Images_2_Process/" + files3[0],"C:/Users/E
         alert("File successfully Processed");
     })})};
 
-var i=0;
-var x;
-var y;
-var coords = new Array();
-SelectVerticies = document.getElementById("SelectVerticies");
-SelectVerticies.onclick = function SelectVerticies() {
-
-    document.addEventListener("click", getClickPosition, false);
+var coordinates = new Array();
+var counter = 0;
+document.getElementById("SelectVerticies").onclick = function SelectVerticies() {
+    coordinates[counter]=document.addEventListener("dblclick", getClick, false);
 };
+function getClick(e) {
+   
+      if (counter>=2)
+    {
+        counter++;
+        document.removeEventListener("dblclick",getClick,false);
+        alert("removed");
+    }
 
-function getClickPosition(e) {
-    var coords2 = new Array();
-    var r=0;
-    var xCoord = e.clientX;
-    var yCoord = e.clientY;
-    coords2[r]=xCoord+","+yCoord;
-    r++;
-    console.log(coords2);
-    //console.log(xCoord+","+yCoord);
-    
- var c = document.getElementById("layer2");
+    if (counter<2) {
+
+    var rect = document.getElementById("myCanvas").getBoundingClientRect();
+        var x= e.clientX - rect.left;
+        var y= e.clientY - rect.top;
+        var c = document.getElementById("layer2");
      var ctx = c.getContext("2d");
      ctx.beginPath();
-     ctx.rect(xCoord,yCoord,20,20);
+     ctx.fillStyle="#ff0000";
+     ctx.fillRect(x,y,7,7);
      ctx.stroke();
+     coordinates[counter]=(x+","+y);
+     console.log(coordinates);
+
+     counter++;
+    }
+};
+
+clear = document.getElementById("Clear");
+clear.onclick = function clearLayer() {
+    counter=0;
+    var c = document.getElementById("layer2");
+    var ctx = c.getContext("2d");
+    ctx.beginPath();
+    ctx.clearRect(0, 0, layer2.width, layer2.height);
 }
+
 //Other tesed code snipits
 
 //Works! Writes data to a file or writes data to a new file
