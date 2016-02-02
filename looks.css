@@ -73,6 +73,7 @@ table {
 	font-size: 14px;
 	float: right;
 	border:1px solid;
+	border-color: black;
 	border-radius: 4px;
 }
 

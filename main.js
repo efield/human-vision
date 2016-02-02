@@ -5,6 +5,7 @@ var Load;
 var address2;
 var newaddress2;
 var coordinates = new Array();
+var imageData = new Array();
 var counter = 0;
 
 //If no target is selected the file is moved from the 'To process folder' to the 'Deleted folder'
@@ -24,11 +25,12 @@ NoTarget = document.getElementById("NoTarget").onclick = function transferDelete
         })
 };    
 
+// Loads newest image from folder into the canvas
 Load = document.getElementById("Load").onclick = function loadNewImage() 
     {
-
     // resets counter for selected verticies and removes any previous drawings on layer2
         counter=0;
+        coordinates = [];
         var c = document.getElementById("layer2");
         var ctx = c.getContext("2d");
         ctx.beginPath();
@@ -38,7 +40,7 @@ Load = document.getElementById("Load").onclick = function loadNewImage()
         {
             if (err) throw err;
             console.log(files2); // gives an array of file names in folder
-            console.log(files2.length); // displays number of files in the folder
+            //console.log(files2.length); // displays number of files in the folder
 
             address2 = "../human-vision/Images_2_Process/" + files2[0];
 
@@ -52,7 +54,24 @@ Load = document.getElementById("Load").onclick = function loadNewImage()
                 ctx.drawImage(img,0,0,1000,625);
                 img.style.display = 'none';
             };
-        })
+        });
+
+        fs.readdir("../human-vision/Metadata", function(err, files4)
+        {
+            if (err) throw err;
+            console.log(files4); // gives an array of file names in folder
+            //console.log(files2.length); // displays number of files in the folder
+
+            address4 = "../human-vision/Metadata/" + files4[0];
+        // Asynchronous read data from file into an array
+        fs.readFile(address4, "UTF-8", function (err, data) {
+           if (err) throw err;
+           {
+            imageData = data.split(","); // removes all "," from the string so "1,2,3" => "1","2","3"
+            console.log(imageData);
+            }
+        });
+        });
     };
 
 //If no target is selected the file is moved from the 'To process folder' to the 'Processed folder'
@@ -72,23 +91,24 @@ Process = document.getElementById("Process").onclick = function transferProcesse
         })
     };
 
-
+// Enables the double click action to select verticies of a target
 document.getElementById("SelectVerticies").onclick = function SelectVerticies()
     {
         coordinates[counter]=document.addEventListener("dblclick", getClick, false);
     };
 
+// Obtains XY coordinates of the click and places a red square on layer2 where clicked
 function getClick(e)
     {
    
-        if (counter>=16)
+        if (counter>=10)
             {
                 counter++;
                 document.removeEventListener("dblclick",getClick,false);
                 alert("removed");
             }
 
-        if (counter<16)
+        if (counter<10)
         {
             var rect = document.getElementById("myCanvas").getBoundingClientRect();
             var x= e.clientX - rect.left;
@@ -97,7 +117,6 @@ function getClick(e)
             coordinates[counter]=x; //all even numbered values ie 0,2,4 are x coordinates
             counter+=1;
             coordinates[counter]=y; // all odd numbered values ie 1,3,5 are y coordinates
-            console.log(coordinates);
             counter++;
 
             var c = document.getElementById("layer2");
@@ -107,11 +126,14 @@ function getClick(e)
             ctx.fillRect(x,y,7,7);
             ctx.stroke();
         }
+        console.log(coordinates);
     };
 
+// Removes all drawings done on layer2
 clear = document.getElementById("Clear").onclick = function clearLayer()
     {
         counter=0;
+        coordinates = [];
 
         var c = document.getElementById("layer2");
         var ctx = c.getContext("2d");
@@ -119,6 +141,8 @@ clear = document.getElementById("Clear").onclick = function clearLayer()
         ctx.clearRect(0, 0, layer2.width, layer2.height);
     }
 
+// Connects the selected verticies and does necessary calculations
+// works for shapes triangle, square and pentagon (needs to be updated to include up to hexagon)
 document.getElementById("Compute").onclick = function Compute()
     {
 
@@ -128,7 +152,7 @@ document.getElementById("Compute").onclick = function Compute()
         var ctx = c.getContext("2d");
         ctx.beginPath();
     
-        if(numVerticies==6)
+        if(numVerticies==6) // Triangle
             {    
                 ctx.moveTo(coordinates[0],coordinates[1]);
                 ctx.lineTo(coordinates[2],coordinates[3]);
@@ -137,7 +161,7 @@ document.getElementById("Compute").onclick = function Compute()
                 ctx.stroke();
             }
 
-        if(numVerticies==8)
+        if(numVerticies==8) // Square
             {
                 ctx.moveTo(coordinates[0],coordinates[1]);
                 ctx.lineTo(coordinates[2],coordinates[3]);
@@ -147,7 +171,7 @@ document.getElementById("Compute").onclick = function Compute()
                 ctx.stroke();
             }
 
-        if(numVerticies==10)
+        if(numVerticies==10) // Pentagon
             {
                 ctx.moveTo(coordinates[0],coordinates[1]);
                 ctx.lineTo(coordinates[2],coordinates[3]);
@@ -169,21 +193,3 @@ fs.writeFile('C:/Users/Eric/human-vision/Images_2_Process/writing.txt', "1,2,3,4
 });
 */
 
-// WORKS! Asynchronous read data from file
-    //    fs.readFile('C:/Users/Eric/human-vision/test.txt', function (err, data) {
-      //     if (err) {
-        //    alert(err);
-          // }
-           //else
-           //{
-            //document.write(data);
-           // }
-       // }); 
-
-//WORKS! to transfer a file from one folder to another
-/*
-fs.rename('C:/Users/Eric/human-vision/Images_2_Process/VTOL.jpg','C:/Users/Eric/human-vision/Processed_Images/VTOL.jpg', function(err) {
-    if (err) throw err;
-    console.log("File successfully moved");
-});
-*/
