@@ -205,26 +205,75 @@ var R = 6371 // km
 var altitude = 0.1 //km
 var initialHeading = 0; // rad
 var heading;
+var headingDeg;
+var lat2;
+var long2;
+var lat2Deg;
+var long2Deg;
+var pixelW1;
+var pixelW2;
+var pixelH1;
+var pixelH2;
+var pixelWRad;
+var pixelHRad;
+var deltaW;
+var deltaH;
+var disance;
 
-var pixelW1 = 500;
-var pixelW2 = 320;
 
-var pixelH1 = 600;
-var pixelH2 = 350;
+//function getGPSCoord()
+//{
+    pixelW1 = 500;
+    pixelW2 = 320;
 
-var pixelWRad = 0.03146*Math.PI/180; // rad
-var pixelHRad = 0.02444*Math.PI/180; // rad
+    pixelH1 = 600;
+    pixelH2 = 350;
 
-var deltaW = .1; //altitude*Math.tan((pixelW2-pixelW1)*pixelWRad); // km
-var deltaH = .100; //altitude*Math.tan((pixelH2-pixelH1)*pixelHRad); // km
+    pixelWRad = 0.04916*Math.PI/180; // rad
+    pixelHRad = 0.05093*Math.PI/180; // rad
 
-var distance = Math.sqrt(deltaW*deltaW+deltaH*deltaH); // km
+    deltaW = altitude*Math.tan((pixelW2-pixelW1)*pixelWRad); // km
+    deltaH = altitude*Math.tan((pixelH2-pixelH1)*pixelHRad); // km
+
+    distance = Math.sqrt(deltaW*deltaW+deltaH*deltaH); // km
 
     if (deltaW==0 && deltaH==0)
     {
         heading = initialHeading;
         lat2 = lat1;
         long2 = long1;
+    }
+    else if (deltaW==0 && deltaH<0)
+    {
+        heading = initialHeading;
+        long2=long1;
+        lat2= (Math.asin(Math.sin(lat1)*Math.cos(distance/R) + Math.cos(lat1)*Math.sin(distance/R)*Math.cos(heading)))*180/Math.PI;
+        long2Deg = long2*180/Math.PI;
+        alert(lat2+", "+long2Deg);
+    }
+    else if (deltaW==0 && deltaH>0)
+    {
+        heading = initialHeading + Math.PI;
+        long2=long1;
+        lat2= (Math.asin(Math.sin(lat1)*Math.cos(distance/R) + Math.cos(lat1)*Math.sin(distance/R)*Math.cos(heading)))*180/Math.PI;
+        long2Deg=long2*180/Math.PI;
+        alert(lat2+", "+long2Deg);
+    }
+    else if (deltaW>0 && deltaH==0)
+    {
+        heading = initialHeading + Math.PI/2;
+        lat2=lat1;
+        long2 = (long1 + Math.atan2(Math.sin(heading)*Math.sin(distance/R)*Math.cos(lat1), Math.cos(distance/R)-Math.sin(lat1)*Math.sin(lat2)))*180/Math.PI;
+        lat2Deg = lat2*180/Math.PI;
+        alert(lat2Deg+", "+long2);     
+    }
+    else if (deltaW<0 && deltaH==0)
+    {
+        heading = initialHeading + 3*Math.PI/2;
+        lat2=lat1;
+        long2 = (long1 + Math.atan2(Math.sin(heading)*Math.sin(distance/R)*Math.cos(lat1), Math.cos(distance/R)-Math.sin(lat1)*Math.sin(lat2)))*180/Math.PI;
+        lat2Deg = lat2*180/Math.PI;
+        alert(lat2Deg+", "+long2);
     }
     else if (deltaW>0 && deltaH<0)
     {
@@ -247,16 +296,22 @@ var distance = Math.sqrt(deltaW*deltaW+deltaH*deltaH); // km
         computeNewCoordinates(lat1,long1,distance,R,heading);
     }
 
-var headingDeg = heading*180/Math.PI;
-alert("heading is "+headingDeg+" deg");
+    headingDeg = heading*180/Math.PI;
+
+    alert(lat2+", "+long2+", "+headingDeg+" deg");
+
+//};
 
 function computeNewCoordinates(lat1,long1,distance,R,heading)
 {
-    var lat2= (Math.asin(Math.sin(lat1)*Math.cos(distance/R) + Math.cos(lat1)*Math.sin(distance/R)*Math.cos(heading)))*180/Math.PI;
-    var long2 = (long1 + Math.atan2(Math.sin(heading)*Math.sin(distance/R)*Math.cos(lat1), Math.cos(distance/R)-Math.sin(lat1)*Math.sin(lat2)))*180/Math.PI;
-    
-    alert(lat2+", "+long2);
+    lat2= (Math.asin(Math.sin(lat1)*Math.cos(distance/R) + Math.cos(lat1)*Math.sin(distance/R)*Math.cos(heading)))*180/Math.PI;
+    long2 = (long1 + Math.atan2(Math.sin(heading)*Math.sin(distance/R)*Math.cos(lat1), Math.cos(distance/R)-Math.sin(lat1)*Math.sin(lat2)))*180/Math.PI;
 };
+
+
+
+
+
 //Other tesed code snipits
 
 //Works! Writes data to a file or writes data to a new file
