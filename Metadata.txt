@@ -1,7 +1,4 @@
-Latitude,Longitude,Altitude,TimeStamp,Heading
+Latitude,Longitude,Altitude,Heading,Timestamp
 
-image scaling for GUI
-distortion
-heading?? does it matter?
+distortion and zoom
 calculating areas and stuff when not all of the targets are in view
-curve of earth taken into consideration for GPS coordinates

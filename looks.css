@@ -20,6 +20,13 @@ table {
 	bottom: 0px;
 	right:0px;
 }
+#consoleDisplay {
+	position:absolute;
+	bottom:750px;
+	right:100px;
+	color: red;
+}
+
 #ProbeDropLoc, #SelectVerticies, #PointTarget {
 	background-color: white;
 	color: black;
