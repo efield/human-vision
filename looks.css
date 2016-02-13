@@ -21,10 +21,14 @@ table {
 	right:0px;
 }
 #consoleDisplay {
-	position:absolute;
-	bottom:750px;
-	right:100px;
-	color: red;
+	float: right;
+	right:10px;
+	top:175px;
+	width:300px;
+	height:700px;
+	color: black;
+	background-color: white;
+	border-radius:3px;
 }
 
 #ProbeDropLoc, #SelectVerticies, #PointTarget {
