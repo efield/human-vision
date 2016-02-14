@@ -2,6 +2,8 @@
 var fs = require("fs"); // Filesystem
 var ExifImage = require("exif").ExifImage; // Metadata Read
 var os = require('os'); // For reading line breaks
+var moment = require('moment'); // Library for easy access of dates (http://momentjs.com/)
+moment().format(); // Part of initializing the moment library
 
 // Array Declarations and Array Counters
 var coordinates = new Array(); // Stores pixel coordinates of clicked points. Used to connect the points with lines
@@ -361,7 +363,7 @@ function getPointTargetCoords(e)
 
         pointTargetCoords[countPT]=x;
         pixelW2=x;
-        countPT++;
+        countPT+=1;
         pointTargetCoords[countPT]=y;
         pixelH2=y;
         countPT++;
@@ -424,12 +426,13 @@ function storePDClickedCoords()
 
 function storePTClickedCoords()
 {
-    GPSClickedCoordsPointTarget[countPDIndex]=lat2;
+    GPSClickedCoordsPointTarget[countPTIndex]=lat2;
     countPTIndex+=1;
     
-    GPSClickedCoordsPointTarget[countPDIndex]=long2;
+    GPSClickedCoordsPointTarget[countPTIndex]=long2;
     countPTIndex++;
-    //alert(GPSClickedCoordsProbeDrop);
+
+    //alert(GPSClickedCoordsPointTarget);
 }
 
 function getGPSCoord()
@@ -443,8 +446,6 @@ function getGPSCoord()
         long2 = long1;//*180/Math.PI;
         
         //alert("Case 1: "+lat2+", "+long2+", "+heading+"deg");
-        
-        storeClickedCoords();
     }
     else if (deltaW==0 && deltaH<0)
     {
@@ -454,8 +455,6 @@ function getGPSCoord()
         heading = initialHeading*180/Math.PI;
         
         //alert("Case 2: "+lat2+", "+long2+", "+heading+"deg");
-        
-        storeClickedCoords();
     }
     else if (deltaW==0 && deltaH>0)
     {
@@ -465,8 +464,6 @@ function getGPSCoord()
         heading = (initialHeading+Math.PI)*180/Math.PI;
 
         //alert("Case 3: "+lat2+", "+long2+", "+heading+"deg");
-
-        storeClickedCoords();
     }
     else if (deltaW>0 && deltaH==0)
     {
@@ -475,9 +472,7 @@ function getGPSCoord()
         lat2 = lat1;//*180/Math.PI;
         heading=(initialHeading+Math.PI/2)*180/Math.PI;
         
-        //alert("Case 4: "+lat2+", "+long2+", "+heading+"deg");
-
-        storeClickedCoords();  
+        //alert("Case 4: "+lat2+", "+long2+", "+heading+"deg");  
     }
     else if (deltaW<0 && deltaH==0)
     {
@@ -487,8 +482,6 @@ function getGPSCoord()
         heading = (initialHeading+3*Math.PI/2)*180/Math.PI;
 
         //alert("Case 5: "+lat2+", "+long2+", "+heading+"deg");
-
-        storeClickedCoords();
     }
     else if (deltaW>0 && deltaH<0)
     {   
@@ -497,8 +490,6 @@ function getGPSCoord()
         headingDeg = heading*180/Math.PI;
         
         //alert("Case 6: "+lat2+", "+long2+", "+headingDeg+" deg");
-        
-        storeClickedCoords();
     }
     else if (deltaW>0 && deltaH>0)
     {
@@ -507,8 +498,6 @@ function getGPSCoord()
         headingDeg = heading*180/Math.PI;
         
         //alert("Case 7: "+lat2+", "+long2+", "+headingDeg+" deg");
-        
-        storeClickedCoords();
     }
     else if (deltaW<0 && deltaH>0)
     {
@@ -517,8 +506,6 @@ function getGPSCoord()
         headingDeg = heading*180/Math.PI;
         
         //alert("Case 8: "+lat2+", "+long2+", "+headingDeg+" deg");
-        
-        storeClickedCoords();
     }
     else
     {
@@ -527,9 +514,8 @@ function getGPSCoord()
         headingDeg = heading*180/Math.PI;
         
         //alert("Case 9: "+lat2+", "+long2+", "+headingDeg+" deg");
-        
-        storeClickedCoords();
     }
+    storeClickedCoords();
 };
 
 function computeProbeDropGPSCoords()
@@ -543,8 +529,6 @@ function computeProbeDropGPSCoords()
         long2 = long1;//*180/Math.PI;
         
         alert("Case 1: "+lat2+", "+long2+", "+heading+"deg");
-
-        storePDClickedCoords();
     }
     else if (deltaW==0 && deltaH<0)
     {
@@ -554,8 +538,6 @@ function computeProbeDropGPSCoords()
         heading = initialHeading*180/Math.PI;
         
         alert("Case 2: "+lat2+", "+long2+", "+heading+"deg");
-
-        storePDClickedCoords();
     }
     else if (deltaW==0 && deltaH>0)
     {
@@ -565,8 +547,6 @@ function computeProbeDropGPSCoords()
         heading = (initialHeading+Math.PI)*180/Math.PI;
 
         alert("Case 3: "+lat2+", "+long2+", "+heading+"deg");
-
-        storePDClickedCoords();
     }
     else if (deltaW>0 && deltaH==0)
     {
@@ -575,9 +555,7 @@ function computeProbeDropGPSCoords()
         lat2 = lat1;//*180/Math.PI;
         heading=(initialHeading+Math.PI/2)*180/Math.PI;
         
-        alert("Case 4: "+lat2+", "+long2+", "+heading+"deg");
-
-        storePDClickedCoords();  
+        alert("Case 4: "+lat2+", "+long2+", "+heading+"deg"); 
     }
     else if (deltaW<0 && deltaH==0)
     {
@@ -587,8 +565,6 @@ function computeProbeDropGPSCoords()
         heading = (initialHeading+3*Math.PI/2)*180/Math.PI;
 
         alert("Case 5: "+lat2+", "+long2+", "+heading+"deg");
-
-        storePDClickedCoords();
     }
     else if (deltaW>0 && deltaH<0)
     {   
@@ -597,8 +573,6 @@ function computeProbeDropGPSCoords()
         headingDeg = heading*180/Math.PI;
         
         alert("Case 6: "+lat2+", "+long2+", "+headingDeg+" deg");
-
-        storePDClickedCoords();
     }
     else if (deltaW>0 && deltaH>0)
     {
@@ -607,8 +581,6 @@ function computeProbeDropGPSCoords()
         headingDeg = heading*180/Math.PI;
         
         alert("Case 7: "+lat2+", "+long2+", "+headingDeg+" deg");
-
-        storePDClickedCoords();
     }
     else if (deltaW<0 && deltaH>0)
     {
@@ -617,8 +589,6 @@ function computeProbeDropGPSCoords()
         headingDeg = heading*180/Math.PI;
         
         alert("Case 8: "+lat2+", "+long2+", "+headingDeg+" deg");
-
-        storePDClickedCoords();
     }
     else
     {
@@ -627,9 +597,8 @@ function computeProbeDropGPSCoords()
         headingDeg = heading*180/Math.PI;
 
         alert("Case 9: "+lat2+", "+long2+", "+headingDeg+" deg");
-
-        storePDClickedCoords();   
     }
+    storePDClickedCoords();
 }
 
 function computePointTargetGPSCoords()
@@ -643,8 +612,6 @@ function computePointTargetGPSCoords()
         long2 = long1;//*180/Math.PI;
         
         alert("Case 1: "+lat2+", "+long2+", "+heading+"deg");
-
-        storePTClickedCoords();
     }
     else if (deltaW==0 && deltaH<0)
     {
@@ -654,8 +621,6 @@ function computePointTargetGPSCoords()
         heading = initialHeading*180/Math.PI;
         
         alert("Case 2: "+lat2+", "+long2+", "+heading+"deg");
-
-        storePTClickedCoords();
     }
     else if (deltaW==0 && deltaH>0)
     {
@@ -665,8 +630,6 @@ function computePointTargetGPSCoords()
         heading = (initialHeading+Math.PI)*180/Math.PI;
 
         alert("Case 3: "+lat2+", "+long2+", "+heading+"deg");
-
-        storePTClickedCoords();
     }
     else if (deltaW>0 && deltaH==0)
     {
@@ -675,9 +638,7 @@ function computePointTargetGPSCoords()
         lat2 = lat1;//*180/Math.PI;
         heading=(initialHeading+Math.PI/2)*180/Math.PI;
         
-        alert("Case 4: "+lat2+", "+long2+", "+heading+"deg");
-
-        storePTClickedCoords();  
+        alert("Case 4: "+lat2+", "+long2+", "+heading+"deg"); 
     }
     else if (deltaW<0 && deltaH==0)
     {
@@ -687,8 +648,6 @@ function computePointTargetGPSCoords()
         heading = (initialHeading+3*Math.PI/2)*180/Math.PI;
 
         alert("Case 5: "+lat2+", "+long2+", "+heading+"deg");
-
-        storePTClickedCoords();
     }
     else if (deltaW>0 && deltaH<0)
     {   
@@ -697,8 +656,6 @@ function computePointTargetGPSCoords()
         headingDeg = heading*180/Math.PI;
         
         alert("Case 6: "+lat2+", "+long2+", "+headingDeg+" deg");
-
-        storePTClickedCoords();
     }
     else if (deltaW>0 && deltaH>0)
     {
@@ -707,8 +664,6 @@ function computePointTargetGPSCoords()
         headingDeg = heading*180/Math.PI;
         
         alert("Case 7: "+lat2+", "+long2+", "+headingDeg+" deg");
-
-        storePTClickedCoords();
     }
     else if (deltaW<0 && deltaH>0)
     {
@@ -717,8 +672,6 @@ function computePointTargetGPSCoords()
         headingDeg = heading*180/Math.PI;
         
         alert("Case 8: "+lat2+", "+long2+", "+headingDeg+" deg");
-
-        storePTClickedCoords();
     }
     else
     {
@@ -727,25 +680,42 @@ function computePointTargetGPSCoords()
         headingDeg = heading*180/Math.PI;
 
         alert("Case 9: "+lat2+", "+long2+", "+headingDeg+" deg");
-
-        storePTClickedCoords();   
     }
+    storePTClickedCoords(); 
 }
 
 function data2Master()
 {
-    masterData[0]=timestamp;
+
+    var now = new moment();
+    
+    masterData[0]=now.format("HH:mm:ss");
 
     masterCounter=1;
 
-    for(var i=0;i<GPSClickedCoords.length;i++)
+    masterData[masterCounter]=A;
+    masterCounter++;
+
+    masterData[masterCounter]=centroidLat;
+    masterCounter++;
+
+    masterData[masterCounter]=centroidLong;
+    masterCounter++;
+
+    for(var j=0;j<GPSClickedCoordsProbeDrop.length;j++)
     {
-        masterData[masterCounter]=GPSClickedCoords[i];
+        masterData[masterCounter]=GPSClickedCoordsProbeDrop[j];
+        masterCounter++;
+    }
+
+    for(var j=0;j<GPSClickedCoordsPointTarget.length;j++)
+    {
+        masterData[masterCounter]=GPSClickedCoordsPointTarget[j];
         masterCounter++;
     }
 
     console.log(masterData);
-    write2DataLog(); // not showing second timestamp
+    write2DataLog();
 }
 
 function connectClickedPoints()
@@ -1060,8 +1030,8 @@ function calculateCentroidCoords()
         p++;
     }
 
-    centroidLat=sumLat/(GPSClickedCoords.length/2)*180/Math.PI; // convert to deg
-    centroidLong=sumLong/(GPSClickedCoords.length/2)*180/Math.PI; // convert to deg
+    centroidLat=sumLat/(GPSClickedCoords.length/2);//*180/Math.PI; // convert to deg
+    centroidLong=sumLong/(GPSClickedCoords.length/2);//*180/Math.PI; // convert to deg
     alert(centroidLat+", "+centroidLong);
 }
 
