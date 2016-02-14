@@ -100,6 +100,16 @@ document.getElementById("Load").onclick = function loadNewImage()
         GPSClickedCoords=[];
         coordsCount=0;
         timestamp=0;
+        groundDistBetweenPoints=[];
+        counter1=0;
+        counter2=1;
+        counter3=0;
+
+        centroidLat=0;
+        centroidLong=0;
+        p=0;
+        sum1=0;
+        sum2=0;
 
         var c = document.getElementById("layer2");
         var ctx = c.getContext("2d");
@@ -192,6 +202,12 @@ document.getElementById("Clear").onclick = function clearLayer()
         counter2=1;
         counter3=0;
 
+        var centroidLat=0;
+        var centroidLong=0;
+        var p=0;
+        var sum1=0;
+        var sum2=0;
+
         var c = document.getElementById("layer2");
         var ctx = c.getContext("2d");
         ctx.beginPath();
@@ -206,6 +222,8 @@ document.getElementById("Compute").onclick = function Compute()
                 connectClickedPoints();
                 distBetweenPoints();
                 calculateArea();
+
+                calculateCentroidCoords();
             }
     };
 
@@ -614,7 +632,7 @@ function squareExtraDistances()
     a = Math.pow(Math.sin((GPSClickedCoords[4]-GPSClickedCoords[0])/2),2)+Math.cos(GPSClickedCoords[4])*Math.cos(GPSClickedCoords[0])*Math.pow(Math.sin(GPSClickedCoords[5]-GPSClickedCoords[1])/2,2);
     c = 2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
     groundDistBetweenPoints[4]=R*c*1000;
-    alert("Extra length: "+groundDistBetweenPoints[4]);
+    //alert("Extra length: "+groundDistBetweenPoints[4]);
 }
 
 function pentagonExtraDistances()
@@ -697,6 +715,35 @@ function octagonExtraDistances()
     c = 2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
     groundDistBetweenPoints[12]=R*c*1000;
     //alert("Fifth extra length: "+groundDistBetweenPoints[12]);
+}
+
+var centroidLat=0;
+var centroidLong=0;
+var p=0;
+var sum1=0;
+var sum2=0;
+
+function calculateCentroidCoords()
+{
+   // if(GPSClickedCoords.length/2==3)
+   // {
+        while(p<GPSClickedCoords.length)
+        {
+        // centroidLat=((GPSClickedCoords[p]+GPSClickedCoords[p+2]+GPSClickedCoords[p+4])/(GPSClickedCoords.length/2))*180/Math.PI;
+        // alert(centroidLat);
+        // centroidLong=((GPSClickedCoords[p+1]+GPSClickedCoords[p+3]+GPSClickedCoords[p+5])/(GPSClickedCoords.length/2))*180/Math.PI;
+        // alert(centroidLong);
+        // p+=20;
+            sum1+=GPSClickedCoords[p];
+            p++;
+            sum2+=GPSClickedCoords[p];
+            p++;
+        }
+
+        centroidLat=sum1/(GPSClickedCoords.length/2);//*180/Math.PI;
+        centroidLong=sum2/(GPSClickedCoords.length/2);//*180/Math.PI;
+        alert(centroidLat+", "+centroidLong);
+   // }
 }
 
 // var c = document.getElementById("consoleDisplay");
