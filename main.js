@@ -5,6 +5,7 @@ var os = require('os'); // For reading line breaks
 var moment = require('moment'); // Library for easy access of dates (http://momentjs.com/)
 moment().format(); // Part of initializing the moment library
 
+
 // Array Declarations and Array Counters
 var coordinates = new Array(); // Stores pixel coordinates of clicked points. Used to connect the points with lines
 var counter = 0; // counter/2 = number of clicked points. Even values = Width coordinate. Odd values = Height Coordinate
@@ -80,6 +81,7 @@ var sumLong=0; // Sum of Longitude Coordinates
 var probeDropCoords = new Array(); // Stores the pixel coordinates that were clicked
 var countPD=0; // index for probeDropCoords
 var GPSClickedCoordsProbeDrop = new Array(); // Stores the Latitude and Longitude of the Probe Drop Locations
+GPSClickedCoordsProbeDrop;
 var countPDIndex=0; // index for GPSClickedCoordsProbeDrop
 
 // Variables for Point Target Location
@@ -93,6 +95,8 @@ var address4; // Address for first text file corresponding to loaded image
 var imageData = new Array(); // Stores metadata read from file
 
 //************************************************************************************************
+
+document.addEventListener('mousedown', function(e){ e.preventDefault(); }, false); // removes highlighting of text when double clicking
 
 //If no target is selected the file is moved from the 'To process folder' to the 'Deleted folder'
 document.getElementById("NoTarget").onclick = function transferDeleted() 
@@ -140,13 +144,23 @@ document.getElementById("Load").onclick = function loadNewImage()
         countPT=0;
         countPTIndex=0;
 
-        document.removeEventListener("dblclick",getProbeDropCoords,false);
+        A=0;
+
         document.removeEventListener("dblclick",getClick,false);
+        document.removeEventListener("dblclick",getProbeDropCoords,false);
+        document.removeEventListener("dblclick",getPointTargetCoords,false);
 
         var c = document.getElementById("layer2");
         var ctx = c.getContext("2d");
         ctx.beginPath();
         ctx.clearRect(0, 0, layer2.width, layer2.height);
+
+        document.getElementById("AreaCalc").innerHTML = "-";
+        document.getElementById("CentroidCalc").innerHTML = "-,-";
+        document.getElementById("ProbeDropCalc").innerHTML = "-,-";
+        document.getElementById("PointTargetCalcPT1").innerHTML = "-,-";
+        document.getElementById("PointTargetCalcPT2").innerHTML = "-,-";
+        document.getElementById("PointTargetCalcPT3").innerHTML = "-,-";
 
         fs.readdir("../human-vision/Images_2_Process", function(err, files2)
         {
@@ -171,8 +185,8 @@ document.getElementById("Load").onclick = function loadNewImage()
                  if (error)
                      console.log("Error: "+error.message);
                  else
-                     //console.log(exifData); // Displays all EXIF metadata for the image
-                     console.log(exifData.makernote); // displays text attached to image ie. alititude,latitiude etc...
+                     console.log(exifData); // Displays all EXIF metadata for the image
+                     console.log(exifData.exif.UserComment.toString()); // displays text attached to image ie. alititude,latitiude etc...
             });
         });
 
@@ -219,6 +233,8 @@ document.getElementById("Process").onclick = function transferProcessed()
 // Enables the double click action to select verticies of a target
 document.getElementById("SelectVerticies").onclick = function SelectVerticies()
     {
+        document.removeEventListener("dblclick",getProbeDropCoords,false);
+        document.removeEventListener("dblclick",getPointTargetCoords,false);
         coordinates[counter]=document.addEventListener("dblclick", getClick, false);
     };
 
@@ -248,6 +264,19 @@ document.getElementById("Clear").onclick = function clearLayer()
         countPT=0;
         countPTIndex=0;
 
+        A=0;
+
+        document.removeEventListener("dblclick",getClick,false);
+        document.removeEventListener("dblclick",getProbeDropCoords,false);
+        document.removeEventListener("dblclick",getPointTargetCoords,false);
+
+        document.getElementById("AreaCalc").innerHTML = "-";
+        document.getElementById("CentroidCalc").innerHTML = "-,-";
+        document.getElementById("ProbeDropCalc").innerHTML = "-,-";
+        document.getElementById("PointTargetCalcPT1").innerHTML = "-,-";
+        document.getElementById("PointTargetCalcPT2").innerHTML = "-,-";
+        document.getElementById("PointTargetCalcPT3").innerHTML = "-,-";
+
         var c = document.getElementById("layer2");
         var ctx = c.getContext("2d");
         ctx.beginPath();
@@ -264,12 +293,15 @@ document.getElementById("Compute").onclick = function Compute()
                 calculateArea();
 
                 calculateCentroidCoords();
+
+                data2Screen();
             }
     };
 
 document.getElementById("ProbeDropLoc").onclick = function ProbeDropLoc()
 {
     document.removeEventListener("dblclick",getClick,false);
+    document.removeEventListener("dblclick",getPointTargetCoords,false);
 
     probeDropCoords[countPD]=document.addEventListener("dblclick",getProbeDropCoords,false);
 }
@@ -716,6 +748,39 @@ function data2Master()
 
     console.log(masterData);
     write2DataLog();
+}
+
+function data2Screen()
+{
+    if (typeof A !== 'undefined' && A !== null && A!==0)
+    {
+        document.getElementById("AreaCalc").innerHTML = A;
+    }
+
+    if (typeof centroidLat>0 || centroidLat<0 && centroidLat !==0 && typeof centroidLong>0 || centroidLong<0 && centroidLong!==0)
+    {
+        document.getElementById("CentroidCalc").innerHTML = centroidLat+","+centroidLong;
+    }
+
+    if (typeof GPSClickedCoordsProbeDrop[0] !== 'undefined' && GPSClickedCoordsProbeDrop[0] !== null && GPSClickedCoordsProbeDrop[0] !==0 && typeof GPSClickedCoordsProbeDrop[1] !== 'undefined' && GPSClickedCoordsProbeDrop[1] !== null && GPSClickedCoordsProbeDrop[1] !==0)
+    {
+        document.getElementById("ProbeDropCalc").innerHTML = GPSClickedCoordsProbeDrop[0]+","+GPSClickedCoordsProbeDrop[1];    
+    }
+
+    if (GPSClickedCoordsPointTarget[0] !== 'undefined' && GPSClickedCoordsPointTarget[0] !== null && GPSClickedCoordsPointTarget[0] !==0 && typeof GPSClickedCoordsPointTarget[1] !== 'undefined' && GPSClickedCoordsPointTarget[1] !== null && GPSClickedCoordsPointTarget[1] !==0)
+    { 
+        document.getElementById("PointTargetCalcPT1").innerHTML = GPSClickedCoordsPointTarget[0]+","+GPSClickedCoordsPointTarget[1];
+    }
+
+        if (GPSClickedCoordsPointTarget[2] !== 'undefined' && GPSClickedCoordsPointTarget[2] !== null && GPSClickedCoordsPointTarget[2] !==0 && typeof GPSClickedCoordsPointTarget[3] !== 'undefined' && GPSClickedCoordsPointTarget[3] !== null && GPSClickedCoordsPointTarget[3] !==0)
+    { 
+        document.getElementById("PointTargetCalcPT2").innerHTML = GPSClickedCoordsPointTarget[2]+","+GPSClickedCoordsPointTarget[3];
+    }
+    
+        if (GPSClickedCoordsPointTarget[4] !== 'undefined' && GPSClickedCoordsPointTarget[4] !== null && GPSClickedCoordsPointTarget[4] !==0 && typeof GPSClickedCoordsPointTarget[5] !== 'undefined' && GPSClickedCoordsPointTarget[5] !== null && GPSClickedCoordsPointTarget[5] !==0)
+    { 
+        document.getElementById("PointTargetCalcPT3").innerHTML = GPSClickedCoordsPointTarget[4]+","+GPSClickedCoordsPointTarget[5];
+    }
 }
 
 function connectClickedPoints()

@@ -21,14 +21,94 @@ table {
 	right:0px;
 }
 #consoleDisplay {
+	position:absolute;
+	z-index: 1;
 	float: right;
 	right:10px;
 	top:175px;
-	width:300px;
-	height:700px;
+	width:350px;
+	height:300px;
 	color: black;
-	background-color: white;
+	background-color: gray;
 	border-radius:3px;
+}
+
+#Area {
+	position:absolute;
+	float:right;
+	top:1px;
+	left:10px;
+	color: white;
+}
+#AreaCalc {
+	position:absolute;
+	float:right;
+	top:20px;
+	left:10px;
+	color: white;
+}
+
+#Centroid {
+	position:absolute;
+	float:right;
+	top:60px;
+	left:10px;
+	color: white;
+}
+
+#CentroidCalc {
+	position:absolute;
+	float:right;
+	top:80px;
+	left:10px;
+	color: white;
+}
+#ProbeDropCoordinates {
+	position:absolute;
+	float:right;
+	top:120px;
+	left:10px;
+	color: white;
+}
+
+#ProbeDropCalc {
+	position:absolute;
+	float:right;
+	top:140px;
+	left:10px;
+	color: white;	
+}
+
+#PointTargetCoordinates {
+	position:absolute;
+	float:right;
+	top:180px;
+	left:10px;
+	color: white;
+}
+
+#PointTargetCalcPT1 {
+	position:absolute;
+	float:right;
+	top:200px;
+	left:10px;
+	color: white;	
+}
+
+#PointTargetCalcPT2 {
+	position:absolute;
+	float:right;
+	top:220px;
+	left:10px;
+	color: white;	
+}
+
+#PointTargetCalcPT3 {
+	position:absolute;
+	float:right;
+	top:240px;
+	left:10px;
+	color: white;	
 }
 
 #ProbeDropLoc, #SelectVerticies, #PointTarget {
