@@ -4,6 +4,7 @@ var ExifImage = require("exif").ExifImage; // Metadata Read
 var os = require('os'); // For reading line breaks
 var moment = require('moment'); // Library for easy access of dates (http://momentjs.com/)
 moment().format(); // Part of initializing the moment library
+var QrCode=require("qrcode-reader"); // Library for reading data from QR
 
 
 // Array Declarations and Array Counters
@@ -81,7 +82,6 @@ var sumLong=0; // Sum of Longitude Coordinates
 var probeDropCoords = new Array(); // Stores the pixel coordinates that were clicked
 var countPD=0; // index for probeDropCoords
 var GPSClickedCoordsProbeDrop = new Array(); // Stores the Latitude and Longitude of the Probe Drop Locations
-GPSClickedCoordsProbeDrop;
 var countPDIndex=0; // index for GPSClickedCoordsProbeDrop
 
 // Variables for Point Target Location
@@ -89,6 +89,14 @@ var pointTargetCoords = new Array(); // Stores pixel coordinates that were click
 var countPT=0; // index for pointTargetCoords
 var GPSClickedCoordsPointTarget = new Array(); // Stores the Latitude and Longitude of the Probe Drop Locations
 var countPDIndex=0; // index for GPSClickedCoordsPointTarget
+
+//Variables for QR Code Reading
+var QRCodeCoords = new Array(); // Stores the pixel x and y coordinates where clicked
+var countQR=0; // index for QRCodeCoords
+var setWidth; // Calculated width of selected area of image 
+var setHeight; // Calculated height of selected area of image
+var QRCodeScannedData; // Stores the text data recieved after decoding the QR Code
+
 
 // For metadata read from .csv file
 var address4; // Address for first text file corresponding to loaded image
@@ -117,50 +125,14 @@ document.getElementById("NoTarget").onclick = function transferDeleted()
 // Loads newest image from folder into the canvas
 document.getElementById("Load").onclick = function loadNewImage() 
     {
-        // resets counter for selected verticies and removes any previous drawings on layer2
-        coordinates=[];
-        counter=0;
-        masterData=[];
-        masterCounter=1;
-        GPSClickedCoords=[];
-        coordsCount=0;
-        timestamp=0;
-        groundDistBetweenPoints=[];
-        counter1=0;
-        counter2=1;
-        counter3=0;
-
-        centroidLat=0;
-        centroidLong=0;
-        p=0;
-        sumLat=0;
-        sumLong=0;
-
-        GPSClickedCoordsProbeDrop=[];
-        countPD=0;
-        countPDIndex=0;
-
-        GPSClickedCoordsPointTarget=[];
-        countPT=0;
-        countPTIndex=0;
-
-        A=0;
-
-        document.removeEventListener("dblclick",getClick,false);
-        document.removeEventListener("dblclick",getProbeDropCoords,false);
-        document.removeEventListener("dblclick",getPointTargetCoords,false);
+        resetVariables();
+        removeEventListeners();
+        resetOnscreenDisplay();
 
         var c = document.getElementById("layer2");
         var ctx = c.getContext("2d");
         ctx.beginPath();
         ctx.clearRect(0, 0, layer2.width, layer2.height);
-
-        document.getElementById("AreaCalc").innerHTML = "-";
-        document.getElementById("CentroidCalc").innerHTML = "-,-";
-        document.getElementById("ProbeDropCalc").innerHTML = "-,-";
-        document.getElementById("PointTargetCalcPT1").innerHTML = "-,-";
-        document.getElementById("PointTargetCalcPT2").innerHTML = "-,-";
-        document.getElementById("PointTargetCalcPT3").innerHTML = "-,-";
 
         fs.readdir("../human-vision/Images_2_Process", function(err, files2)
         {
@@ -233,54 +205,27 @@ document.getElementById("Process").onclick = function transferProcessed()
 // Enables the double click action to select verticies of a target
 document.getElementById("SelectVerticies").onclick = function SelectVerticies()
     {
-        document.removeEventListener("dblclick",getProbeDropCoords,false);
-        document.removeEventListener("dblclick",getPointTargetCoords,false);
+        removeEventListeners();
+
         coordinates[counter]=document.addEventListener("dblclick", getClick, false);
     };
 
 // Removes all drawings done on layer2
 document.getElementById("Clear").onclick = function clearLayer()
     {
-        counter=0;
-        coordinates = [];
-        GPSClickedCoords=[];
-        coordsCount=0;
-        groundDistBetweenPoints=[];
-        counter1=0;
-        counter2=1;
-        counter3=0;
-
-        centroidLat=0;
-        centroidLong=0;
-        p=0;
-        sumLat=0;
-        sumLong=0;
-
-        GPSClickedCoordsProbeDrop=[];
-        countPD=0;
-        countPDIndex=0;
-
-        GPSClickedCoordsPointTarget=[];
-        countPT=0;
-        countPTIndex=0;
-
-        A=0;
-
-        document.removeEventListener("dblclick",getClick,false);
-        document.removeEventListener("dblclick",getProbeDropCoords,false);
-        document.removeEventListener("dblclick",getPointTargetCoords,false);
-
-        document.getElementById("AreaCalc").innerHTML = "-";
-        document.getElementById("CentroidCalc").innerHTML = "-,-";
-        document.getElementById("ProbeDropCalc").innerHTML = "-,-";
-        document.getElementById("PointTargetCalcPT1").innerHTML = "-,-";
-        document.getElementById("PointTargetCalcPT2").innerHTML = "-,-";
-        document.getElementById("PointTargetCalcPT3").innerHTML = "-,-";
+        resetVariables();
+        removeEventListeners();
+        resetOnscreenDisplay();
 
         var c = document.getElementById("layer2");
         var ctx = c.getContext("2d");
         ctx.beginPath();
         ctx.clearRect(0, 0, layer2.width, layer2.height);
+
+        var c1 = document.getElementById("qrcodedata");
+        var ctx1 = c1.getContext("2d");
+        ctx1.beginPath();
+        ctx1.clearRect(0,0,qrcodedata.width,qrcodedata.height);
     }
 
 // Connects the selected verticies and does necessary calculations. Works for shapes with up to 8 verticies
@@ -300,19 +245,23 @@ document.getElementById("Compute").onclick = function Compute()
 
 document.getElementById("ProbeDropLoc").onclick = function ProbeDropLoc()
 {
-    document.removeEventListener("dblclick",getClick,false);
-    document.removeEventListener("dblclick",getPointTargetCoords,false);
+    removeEventListeners();
 
     probeDropCoords[countPD]=document.addEventListener("dblclick",getProbeDropCoords,false);
 }
 
 document.getElementById("PointTarget").onclick = function PointTrargetLoc()
 {
-    document.removeEventListener("dblclick",getClick,false);
-    document.removeEventListener("dblclick",getProbeDropCoords,false);
+    removeEventListeners();
 
     pointTargetCoords[countPT]=document.addEventListener("dblclick",getPointTargetCoords,false);
+}
 
+document.getElementById("QRCode").onclick= function QRCode()
+{
+   removeEventListeners();
+
+    QRCodeCoords[countQR]=document.addEventListener("dblclick",getQRCodeCoords,false);
 }
 
 // Obtains XY coordinates of the click on the canvas image and places a red square on layer2 on the location of the click
@@ -409,6 +358,92 @@ function getPointTargetCoords(e)
         ctx.fillRect(x,y,7,7);
         ctx.stroke();
     }
+}
+
+function getQRCodeCoords(e)
+{
+
+    if (countQR>3)
+    {
+        document.removeEventListener("dblclick",getQRCodeCoords,false);
+    }
+    else
+    {
+        var rect = document.getElementById("myCanvas").getBoundingClientRect();
+        var x= e.clientX - rect.left;
+        var y= e.clientY - rect.top;
+
+        QRCodeCoords[countQR]=x;
+        countQR++;
+        QRCodeCoords[countQR]=y;
+        countQR++;
+
+        var c = document.getElementById("layer2");
+        var ctx = c.getContext("2d");
+        ctx.beginPath();
+        ctx.fillStyle="#551a8b";
+        ctx.fillRect(x,y,7,7);
+        ctx.stroke();
+        alert(QRCodeCoords);
+
+        if (countQR==4)
+        {
+            transferQRCodeImage();
+        }
+    }
+}
+
+function removeEventListeners()
+{
+    document.removeEventListener("dblclick",getClick,false);
+    document.removeEventListener("dblclick",getProbeDropCoords,false);
+    document.removeEventListener("dblclick",getPointTargetCoords,false);
+    document.removeEventListener("dblclick",getQRCodeCoords,false);  
+}
+
+function resetVariables()
+{
+    coordinates=[];
+    counter=0;
+    masterData=[];
+    masterCounter=1;
+    GPSClickedCoords=[];
+    coordsCount=0;
+    timestamp=0;
+    groundDistBetweenPoints=[];
+    counter1=0;
+    counter2=1;
+    counter3=0;
+
+    centroidLat=0;
+    centroidLong=0;
+    p=0;
+    sumLat=0;
+    sumLong=0;
+
+    GPSClickedCoordsProbeDrop=[];
+    countPD=0;
+    countPDIndex=0;
+
+    GPSClickedCoordsPointTarget=[];
+    countPT=0;
+    countPTIndex=0;
+
+    A=0;
+
+    QRCodeCoords=[];
+    countQR=0;
+}
+
+function resetOnscreenDisplay()
+{
+    document.getElementById("AreaCalc").innerHTML = "-";
+    document.getElementById("CentroidCalc").innerHTML = "-,-";
+    document.getElementById("ProbeDropCalc").innerHTML = "-,-";
+    document.getElementById("PointTargetCalcPT1").innerHTML = "-,-";
+    document.getElementById("PointTargetCalcPT2").innerHTML = "-,-";
+    document.getElementById("PointTargetCalcPT3").innerHTML = "-,-";
+    document.getElementById("QRData").innerHTML="-";
 }
 
 function metadata2Variables()
@@ -754,32 +789,36 @@ function data2Screen()
 {
     if (typeof A !== 'undefined' && A !== null && A!==0)
     {
-        document.getElementById("AreaCalc").innerHTML = A;
+        document.getElementById("AreaCalc").innerHTML = A+" m^2";
     }
 
     if (typeof centroidLat>0 || centroidLat<0 && centroidLat !==0 && typeof centroidLong>0 || centroidLong<0 && centroidLong!==0)
     {
-        document.getElementById("CentroidCalc").innerHTML = centroidLat+","+centroidLong;
+        document.getElementById("CentroidCalc").innerHTML = centroidLat*180/Math.PI+","+centroidLong*180/Math.PI;
     }
 
     if (typeof GPSClickedCoordsProbeDrop[0] !== 'undefined' && GPSClickedCoordsProbeDrop[0] !== null && GPSClickedCoordsProbeDrop[0] !==0 && typeof GPSClickedCoordsProbeDrop[1] !== 'undefined' && GPSClickedCoordsProbeDrop[1] !== null && GPSClickedCoordsProbeDrop[1] !==0)
     {
-        document.getElementById("ProbeDropCalc").innerHTML = GPSClickedCoordsProbeDrop[0]+","+GPSClickedCoordsProbeDrop[1];    
+        document.getElementById("ProbeDropCalc").innerHTML = GPSClickedCoordsProbeDrop[0]*180/Math.PI+","+GPSClickedCoordsProbeDrop[1]*180/Math.PI;    
     }
 
     if (GPSClickedCoordsPointTarget[0] !== 'undefined' && GPSClickedCoordsPointTarget[0] !== null && GPSClickedCoordsPointTarget[0] !==0 && typeof GPSClickedCoordsPointTarget[1] !== 'undefined' && GPSClickedCoordsPointTarget[1] !== null && GPSClickedCoordsPointTarget[1] !==0)
     { 
-        document.getElementById("PointTargetCalcPT1").innerHTML = GPSClickedCoordsPointTarget[0]+","+GPSClickedCoordsPointTarget[1];
+        document.getElementById("PointTargetCalcPT1").innerHTML = GPSClickedCoordsPointTarget[0]*180/Math.PI+","+GPSClickedCoordsPointTarget[1]*180/Math.PI;
     }
 
-        if (GPSClickedCoordsPointTarget[2] !== 'undefined' && GPSClickedCoordsPointTarget[2] !== null && GPSClickedCoordsPointTarget[2] !==0 && typeof GPSClickedCoordsPointTarget[3] !== 'undefined' && GPSClickedCoordsPointTarget[3] !== null && GPSClickedCoordsPointTarget[3] !==0)
+    if (GPSClickedCoordsPointTarget[2] !== 'undefined' && GPSClickedCoordsPointTarget[2] !== null && GPSClickedCoordsPointTarget[2] !==0 && typeof GPSClickedCoordsPointTarget[3] !== 'undefined' && GPSClickedCoordsPointTarget[3] !== null && GPSClickedCoordsPointTarget[3] !==0)
     { 
-        document.getElementById("PointTargetCalcPT2").innerHTML = GPSClickedCoordsPointTarget[2]+","+GPSClickedCoordsPointTarget[3];
+        document.getElementById("PointTargetCalcPT2").innerHTML = GPSClickedCoordsPointTarget[2]*180/Math.PI+","+GPSClickedCoordsPointTarget[3]*180/Math.PI;
     }
-    
-        if (GPSClickedCoordsPointTarget[4] !== 'undefined' && GPSClickedCoordsPointTarget[4] !== null && GPSClickedCoordsPointTarget[4] !==0 && typeof GPSClickedCoordsPointTarget[5] !== 'undefined' && GPSClickedCoordsPointTarget[5] !== null && GPSClickedCoordsPointTarget[5] !==0)
+
+    if (GPSClickedCoordsPointTarget[4] !== 'undefined' && GPSClickedCoordsPointTarget[4] !== null && GPSClickedCoordsPointTarget[4] !==0 && typeof GPSClickedCoordsPointTarget[5] !== 'undefined' && GPSClickedCoordsPointTarget[5] !== null && GPSClickedCoordsPointTarget[5] !==0)
     { 
-        document.getElementById("PointTargetCalcPT3").innerHTML = GPSClickedCoordsPointTarget[4]+","+GPSClickedCoordsPointTarget[5];
+        document.getElementById("PointTargetCalcPT3").innerHTML = GPSClickedCoordsPointTarget[4]*180/Math.PI+","+GPSClickedCoordsPointTarget[5]*180/Math.PI;
+    }
+    if (QRCodeScannedData !== 'undefined' && QRCodeCoords !== null)
+    {
+        document.getElementById("QRData").innerHTML = QRCodeScannedData;
     }
 }
 
@@ -1100,6 +1139,78 @@ function calculateCentroidCoords()
     alert(centroidLat+", "+centroidLong);
 }
 
+
+
+
+// var c = document.createElement("qrcodedata");
+// var img = document.getElementById("qrcode");
+// ctx.drawImage(img, 0, 0 );
+// var myData = ctx.getImageData(0, 0, img.width, img.height);
+// qr.decode(myData);
+// console.log(myData);
+
+
+function transferQRCodeImage()
+    {
+        qr= new QrCode();
+        qr.callback= function(result)
+        {
+            QRCodeScannedData=result;
+            alert(result);
+            //console.log(result); // this is the info we get from the QR Code
+        }
+        setWidth = Math.abs(Math.round(QRCodeCoords[0]-QRCodeCoords[2]));
+        setHeight = Math.abs(Math.round(QRCodeCoords[1]-QRCodeCoords[3]));
+
+        var c1 = document.getElementById("myCanvas");
+        var c2 = document.getElementById("qrcodedata");
+        var ctx1 = c1.getContext("2d");
+        var ctx2 = c2.getContext("2d");
+
+        var imgData1 = ctx1.getImageData(QRCodeCoords[0],QRCodeCoords[1],setWidth,setHeight);
+        ctx2.putImageData(imgData1,0,0);
+        qr.decode(imgData1); // decodes the QR Code to get the result
+    }
+        // document.getElementById("myCanvas").onload = function ya()
+        // {
+        //     var c=document.getElementById("qrcodedata");
+        //     var ctx=c.getContext("2d");
+        //     var imgData=ctx.createImageData(100,100);
+        //     for (var i=0;i<imgData.data.length;i+=4)
+        //     {
+        //         imgData.data[i+0]=255;
+        //         imgData.data[i+1]=0;
+        //         imgData.data[i+2]=0;
+        //         imgData.data[i+3]=255;
+        //     }
+        //     ctx.putImageData(imgData,0,0);
+        // }
+
+
+        // alert(setWidth+","+setHeight);
+
+        // var c = document.getElementById("qrcodedata");
+        // var ctx = c.getContext("2d");
+        // var img= document.getElementById("myCanvas");
+        // alert("here");
+        // ctx.drawImage(img,0,0,100,100);
+        // var QRCodePixels = ctx.getImageData(QRCodeCoords[0],QRCodeCoords[1],setWidth,setHeight);
+        // alert("there");
+        // qr= new QrCode();
+        // qr.callback= function(result)
+        // {
+        //     alert(result);
+        //     console.log(result); // this is the info we get from the QR Code
+        // }
+
+        // var c = document.getElementById("qrcodedata");
+        // var ctx = c.getContext("2d");
+        // //var img = document.getElementById("qrcode");
+        // var myData = ctx.drawImage(img,0,0,100,100);
+        // var imgData = ctx.getImageData(0,0,150,150);
+
+        // qr.decode(imgData); // decodes the QR Code to get the result
+    
 // var c = document.getElementById("consoleDisplay");
 // var ctx = c.getContext("2d");
 // ctx.fillStyle="15px Arial";

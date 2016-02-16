@@ -25,11 +25,22 @@ table {
 	z-index: 1;
 	float: right;
 	right:10px;
-	top:175px;
+	top:250px;
 	width:350px;
-	height:300px;
+	height:350px;
 	color: black;
 	background-color: gray;
+	border-radius:3px;
+}
+
+#qrcodedata 
+{
+	position:absolute;
+	float:right;
+	z-index:0;
+	right:25px;
+	top:600px;
+	z-index:0;
 	border-radius:3px;
 }
 
@@ -111,7 +122,23 @@ table {
 	color: white;	
 }
 
-#ProbeDropLoc, #SelectVerticies, #PointTarget {
+#QRCodeText {
+	position:absolute;
+	float:right;
+	top:280px;
+	left:10px;
+	color: white;
+}
+
+#QRData {
+	position:absolute;
+	float:right;
+	top:300px;
+	left:10px;
+	color: white;
+}
+
+#ProbeDropLoc, #SelectVerticies, #PointTarget, #QRCode {
 	background-color: white;
 	color: black;
 	padding: 9px 9px;
@@ -150,7 +177,7 @@ table {
 #NoTarget {
 	background-color: #ff0000;
 	color: white;
-	padding: 7px 7px;
+	padding: 9px 9px;
 	font-size: 14px;
 	float: right;
 	border: 1px solid;
@@ -179,7 +206,7 @@ table {
 	border-radius: 4px;
 }
 
-#ProbeDropLoc:active, #SelectVerticies:active, #PointTarget:active {
+#ProbeDropLoc:active, #SelectVerticies:active, #PointTarget:active, #QRCode:active {
 	background-color: #00cc00;
 }
 #Compute:active {

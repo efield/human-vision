@@ -13,6 +13,7 @@
 
 </head>
 <body>
+<!--<img id="qrcode" src="C:/Users/Eric/human-vision/Images_2_Process/aerialqrcode.jpg">-->
 
 <table>
 <tr>
@@ -26,8 +27,7 @@
 </tr>
 <tr>
     <td>
-        <button type="button" id="Clear">Clear</button>
-        
+        <button type="button" id="QRCode">QR Code</button>
     </td>
     <td>
         <button type="button" id="PointTarget">Point Target</button>
@@ -35,14 +35,18 @@
 </tr>
 <tr>
     <td>
-        <button type="button" id="Compute">Compute</button>
+        <button type="button" id="Clear">Clear</button>
     </td>
     <td>
-        <button type="button" id="Process">Process</button>
+        <button type="button" id="Compute">Compute</button>
     </td>
 </tr>
 <tr>
 </tr>
+<td></td>
+    <td>
+        <button type="button" id="Process">Process</button>
+    </td>
 <tr>
 
 </table>
@@ -75,7 +79,7 @@
 <div id="consoleDisplay" style="position:absolute' z-index:1;">
 <p id="Area">Area:</p>
 <p id="AreaCalc">-</p>
-<p id="Centroid">Centroid </p>
+<p id="Centroid">Centroid:</p>
 <P id="CentroidCalc">-,-</P>
 <p id="ProbeDropCoordinates">Probe Drop Location:</p>
 <p id="ProbeDropCalc">-,-</p>
@@ -83,8 +87,11 @@
 <p id="PointTargetCalcPT1">-,-</p>
 <p id="PointTargetCalcPT2">-,-</p>
 <p id="PointTargetCalcPT3">-,-</p>
-
+<p id="QRCodeText">QR Code Data:</p>
+<p id="QRData">-</p>
 </div>
+
+<canvas id="qrcodedata" width="300" height="330"></canvas>
 
 </body>
 </html>
