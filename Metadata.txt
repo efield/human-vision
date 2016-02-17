@@ -1,4 +1,0 @@
-Latitude,Longitude,Altitude,Heading,Timestamp
-
-distortion and zoom
-calculating areas and stuff when not all of the targets are in view

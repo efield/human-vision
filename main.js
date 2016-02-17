@@ -1,3 +1,8 @@
+/*************************************************************************************************
+
+                                    Defined Variables
+
+*************************************************************************************************/
 // Requires
 var fs = require("fs"); // Filesystem
 var ExifImage = require("exif").ExifImage; // Metadata Read
@@ -5,7 +10,6 @@ var os = require('os'); // For reading line breaks
 var moment = require('moment'); // Library for easy access of dates (http://momentjs.com/)
 moment().format(); // Part of initializing the moment library
 var QrCode=require("qrcode-reader"); // Library for reading data from QR
-
 
 // Array Declarations and Array Counters
 var coordinates = new Array(); // Stores pixel coordinates of clicked points. Used to connect the points with lines
@@ -25,11 +29,11 @@ var pixelWRad = 0.061458*Math.PI/180; // rad comes from Width IFOV calc 94.4/153
 var pixelHRad = 0.063657*Math.PI/180; // rad comes from Height IFOV calc 55/864
 
 // Data obtained from metadata
-var timestamp; // "1:53:47"
-var lat1; // = 50*Math.PI/180;
-var long1; // = -90*Math.PI/180;
-var altitude; // = 0.1 //km
-var initialHeading; // = 0; // rad 0==N 90==E 180==S 270==W
+var timestamp; // Timestamp when image was taken
+var lat1; // = Latitude of plane where image was taken
+var long1; // Longitude of plane where image was taken
+var altitude; // Altitude when image was taken
+var initialHeading; // Heading of the plane in rad when image was taken (converted to deg 0==N 90==E 180==S 270==W)
 
 // Clicked Pixel Coordinates
 var pixelW2; // Clicked Width Coord
@@ -97,14 +101,53 @@ var setWidth; // Calculated width of selected area of image
 var setHeight; // Calculated height of selected area of image
 var QRCodeScannedData; // Stores the text data recieved after decoding the QR Code
 
-
 // For metadata read from .csv file
 var address4; // Address for first text file corresponding to loaded image
 var imageData = new Array(); // Stores metadata read from file
 
-//************************************************************************************************
+/*************************************************************************************************
 
-document.addEventListener('mousedown', function(e){ e.preventDefault(); }, false); // removes highlighting of text when double clicking
+                        Function For Resetting All Variables
+
+*************************************************************************************************/
+function resetVariables()
+{
+    coordinates=[];
+    counter=0;
+    masterData=[];
+    masterCounter=1;
+    GPSClickedCoords=[];
+    coordsCount=0;
+    timestamp=0;
+    groundDistBetweenPoints=[];
+    counter1=0;
+    counter2=1;
+    counter3=0;
+
+    centroidLat=0;
+    centroidLong=0;
+    p=0;
+    sumLat=0;
+    sumLong=0;
+
+    GPSClickedCoordsProbeDrop=[];
+    countPD=0;
+    countPDIndex=0;
+
+    GPSClickedCoordsPointTarget=[];
+    countPT=0;
+    countPTIndex=0;
+
+    A=0;
+
+    QRCodeCoords=[];
+    countQR=0;
+}
+/*************************************************************************************************
+
+                                BUTTON CLICKING FUNCTIONS
+
+*************************************************************************************************/
 
 //If no target is selected the file is moved from the 'To process folder' to the 'Deleted folder'
 document.getElementById("NoTarget").onclick = function transferDeleted() 
@@ -124,91 +167,94 @@ document.getElementById("NoTarget").onclick = function transferDeleted()
 
 // Loads newest image from folder into the canvas
 document.getElementById("Load").onclick = function loadNewImage() 
+{
+    resetVariables();
+    removeEventListeners();
+    resetOnscreenDisplay();
+
+    var c = document.getElementById("layer2");
+    var ctx = c.getContext("2d");
+    ctx.beginPath();
+    ctx.clearRect(0, 0, layer2.width, layer2.height);
+
+    fs.readdir("../human-vision/Images_2_Process", function(err, files2)
     {
-        resetVariables();
-        removeEventListeners();
-        resetOnscreenDisplay();
+        if (err) throw err;
+        //console.log(files2);
 
-        var c = document.getElementById("layer2");
-        var ctx = c.getContext("2d");
-        ctx.beginPath();
-        ctx.clearRect(0, 0, layer2.width, layer2.height);
+        address2 = "../human-vision/Images_2_Process/" + files2[0];
 
-        fs.readdir("../human-vision/Images_2_Process", function(err, files2)
+        var img = new Image();
+        img.src = address2;
+        var canvas = document.getElementById('myCanvas');
+        var ctx = canvas.getContext('2d');
+
+        img.onload = function() 
         {
-            if (err) throw err;
-            //console.log(files2);
+            ctx.drawImage(img,0,0,1536,864);
+            img.style.display = 'none';
+        };
 
-            address2 = "../human-vision/Images_2_Process/" + files2[0];
-
-            var img = new Image();
-            img.src = address2;
-            var canvas = document.getElementById('myCanvas');
-            var ctx = canvas.getContext('2d');
-
-            img.onload = function() 
-            {
-                ctx.drawImage(img,0,0,1536,864);
-                img.style.display = 'none';
-            };
-
-            // Retrives metadata from image
-             new ExifImage({ image : address2 }, function (error, exifData) {
-                 if (error)
-                     console.log("Error: "+error.message);
-                 else
-                     console.log(exifData); // Displays all EXIF metadata for the image
-                     console.log(exifData.exif.UserComment.toString()); // displays text attached to image ie. alititude,latitiude etc...
-            });
+        // Retrives metadata from image
+        new ExifImage({ image : address2 }, function (error, exifData) {
+        if (error)
+        console.log("Error: "+error.message);
+        else
+            console.log(exifData); // Displays all EXIF metadata for the image
+            console.log(exifData.exif.UserComment.toString()); // displays text attached to image ie. alititude,latitiude etc...
         });
+    });
 
         //Reading metadata from .txt files
-        fs.readdir("../human-vision/Metadata", function(err, files4)
-        {
-            if (err) throw err;
-            
-            address4 = "../human-vision/Metadata/" + files4[0];
-        
-            // Asynchronous read data from file into an array
-            fs.readFile(address4, "UTF-8", function (err, data) 
-            {
-                if (err) throw err;
-                {
-                    imageData = data.split(","); // removes all "," from the string so "1,2,3" => "1","2","3"
-
-                    metadata2Variables();
-            
-                }
-            });
-
-        });
-    };
-
-//If no target is selected the file is moved from the 'To process folder' to the 'Processed folder'
-document.getElementById("Process").onclick = function transferProcessed()
+    fs.readdir("../human-vision/Metadata", function(err, files4)
     {
-        fs.readdir("../human-vision/Images_2_Process", function(err,files3)
+        if (err) throw err;
+            
+        address4 = "../human-vision/Metadata/" + files4[0];
+        
+        // Asynchronous read data from file into an array
+        fs.readFile(address4, "UTF-8", function (err, data) 
         {
             if (err) throw err;
-
-            data2Master();
-
-            fs.rename("../human-vision/Images_2_Process/" + files3[0],"../human-vision/Processed_Images/" + files3[0], function(err)
             {
-                if (err) throw err;
-                alert("File successfully Processed");
+                imageData = data.split(","); // removes all "," from the string so "1,2,3" => "1","2","3"
 
-            })
-        })
-    };
+                metadata2Variables();
+            
+            }
+        });
+
+    });
+};
 
 // Enables the double click action to select verticies of a target
 document.getElementById("SelectVerticies").onclick = function SelectVerticies()
     {
         removeEventListeners();
 
-        coordinates[counter]=document.addEventListener("dblclick", getClick, false);
+        coordinates[counter]=document.addEventListener("dblclick", getSelectVerticies, false);
     };
+
+document.getElementById("ProbeDropLoc").onclick = function ProbeDropLoc()
+{
+    removeEventListeners();
+
+    probeDropCoords[countPD]=document.addEventListener("dblclick",getProbeDropCoords,false);
+}
+
+document.getElementById("PointTarget").onclick = function PointTrargetLoc()
+{
+    removeEventListeners();
+
+    pointTargetCoords[countPT]=document.addEventListener("dblclick",getPointTargetCoords,false);
+}
+
+document.getElementById("QRCode").onclick= function QRCode()
+{
+   removeEventListeners();
+
+    QRCodeCoords[countQR]=document.addEventListener("dblclick",getQRCodeCoords,false);
+}
 
 // Removes all drawings done on layer2
 document.getElementById("Clear").onclick = function clearLayer()
@@ -236,6 +282,7 @@ document.getElementById("Compute").onclick = function Compute()
                 connectClickedPoints();
                 distBetweenPoints();
                 calculateArea();
+                //computeArea(); Simpler method ... broken
 
                 calculateCentroidCoords();
 
@@ -243,34 +290,37 @@ document.getElementById("Compute").onclick = function Compute()
             }
     };
 
-document.getElementById("ProbeDropLoc").onclick = function ProbeDropLoc()
+//If no target is selected the file is moved from the 'To process folder' to the 'Processed folder'
+document.getElementById("Process").onclick = function transferProcessed()
 {
-    removeEventListeners();
+    fs.readdir("../human-vision/Images_2_Process", function(err,files3)
+    {
+        if (err) throw err;
 
-    probeDropCoords[countPD]=document.addEventListener("dblclick",getProbeDropCoords,false);
-}
+        data2Master();
 
-document.getElementById("PointTarget").onclick = function PointTrargetLoc()
-{
-    removeEventListeners();
+        fs.rename("../human-vision/Images_2_Process/" + files3[0],"../human-vision/Processed_Images/" + files3[0], function(err)
+        {
+            if (err) throw err;
+            alert("File successfully Processed");
 
-    pointTargetCoords[countPT]=document.addEventListener("dblclick",getPointTargetCoords,false);
-}
+        })
+    })
+};
 
-document.getElementById("QRCode").onclick= function QRCode()
-{
-   removeEventListeners();
+/*************************************************************************************************
 
-    QRCodeCoords[countQR]=document.addEventListener("dblclick",getQRCodeCoords,false);
-}
+    Event Listener Functions for Select Verticies, Probe Drop, Point Target and QR Code Buttons
+
+*************************************************************************************************/
 
 // Obtains XY coordinates of the click on the canvas image and places a red square on layer2 on the location of the click
-function getClick(e)
+function getSelectVerticies(e)
     {
    
         if (counter>=16)
             {
-                document.removeEventListener("dblclick",getClick,false);
+                document.removeEventListener("dblclick",getSelectVerticies,false);
                 alert("removed click listener");
             }
 
@@ -288,7 +338,7 @@ function getClick(e)
             pixelH2=y; // need to put into the array to store all the GPS data and headings
             counter++;
 
-            getGPSCoord(); // calls function to calculate GPS coordinate of each click
+            computeSelectVerticiesGPSCoord(); // calls function to calculate GPS coordinate of each click
 
             var c = document.getElementById("layer2");
             var ctx = c.getContext("2d");
@@ -393,46 +443,57 @@ function getQRCodeCoords(e)
     }
 }
 
+document.addEventListener('mousedown', function(e){ e.preventDefault(); }, false); // removes highlighting of text when double clicking
+
 function removeEventListeners()
 {
-    document.removeEventListener("dblclick",getClick,false);
+    document.removeEventListener("dblclick",getSelectVerticies,false);
     document.removeEventListener("dblclick",getProbeDropCoords,false);
     document.removeEventListener("dblclick",getPointTargetCoords,false);
     document.removeEventListener("dblclick",getQRCodeCoords,false);  
 }
 
-function resetVariables()
+/*************************************************************************************************
+
+                        Functions for On Screen Display of Data
+
+*************************************************************************************************/
+
+function data2Screen()
 {
-    coordinates=[];
-    counter=0;
-    masterData=[];
-    masterCounter=1;
-    GPSClickedCoords=[];
-    coordsCount=0;
-    timestamp=0;
-    groundDistBetweenPoints=[];
-    counter1=0;
-    counter2=1;
-    counter3=0;
+    if (typeof A !== 'undefined' && A !== null && A!==0)
+    {
+        document.getElementById("AreaCalc").innerHTML = A+" m^2";
+    }
 
-    centroidLat=0;
-    centroidLong=0;
-    p=0;
-    sumLat=0;
-    sumLong=0;
+    if (typeof centroidLat>0 || centroidLat<0 && centroidLat !==0 && typeof centroidLong>0 || centroidLong<0 && centroidLong!==0)
+    {
+        document.getElementById("CentroidCalc").innerHTML = centroidLat*180/Math.PI+","+centroidLong*180/Math.PI;
+    }
 
-    GPSClickedCoordsProbeDrop=[];
-    countPD=0;
-    countPDIndex=0;
+    if (typeof GPSClickedCoordsProbeDrop[0] !== 'undefined' && GPSClickedCoordsProbeDrop[0] !== null && GPSClickedCoordsProbeDrop[0] !==0 && typeof GPSClickedCoordsProbeDrop[1] !== 'undefined' && GPSClickedCoordsProbeDrop[1] !== null && GPSClickedCoordsProbeDrop[1] !==0)
+    {
+        document.getElementById("ProbeDropCalc").innerHTML = GPSClickedCoordsProbeDrop[0]*180/Math.PI+","+GPSClickedCoordsProbeDrop[1]*180/Math.PI;    
+    }
 
-    GPSClickedCoordsPointTarget=[];
-    countPT=0;
-    countPTIndex=0;
+    if (GPSClickedCoordsPointTarget[0] !== 'undefined' && GPSClickedCoordsPointTarget[0] !== null && GPSClickedCoordsPointTarget[0] !==0 && typeof GPSClickedCoordsPointTarget[1] !== 'undefined' && GPSClickedCoordsPointTarget[1] !== null && GPSClickedCoordsPointTarget[1] !==0)
+    { 
+        document.getElementById("PointTargetCalcPT1").innerHTML = GPSClickedCoordsPointTarget[0]*180/Math.PI+","+GPSClickedCoordsPointTarget[1]*180/Math.PI;
+    }
 
-    A=0;
+    if (GPSClickedCoordsPointTarget[2] !== 'undefined' && GPSClickedCoordsPointTarget[2] !== null && GPSClickedCoordsPointTarget[2] !==0 && typeof GPSClickedCoordsPointTarget[3] !== 'undefined' && GPSClickedCoordsPointTarget[3] !== null && GPSClickedCoordsPointTarget[3] !==0)
+    { 
+        document.getElementById("PointTargetCalcPT2").innerHTML = GPSClickedCoordsPointTarget[2]*180/Math.PI+","+GPSClickedCoordsPointTarget[3]*180/Math.PI;
+    }
 
-    QRCodeCoords=[];
-    countQR=0;
+    if (GPSClickedCoordsPointTarget[4] !== 'undefined' && GPSClickedCoordsPointTarget[4] !== null && GPSClickedCoordsPointTarget[4] !==0 && typeof GPSClickedCoordsPointTarget[5] !== 'undefined' && GPSClickedCoordsPointTarget[5] !== null && GPSClickedCoordsPointTarget[5] !==0)
+    { 
+        document.getElementById("PointTargetCalcPT3").innerHTML = GPSClickedCoordsPointTarget[4]*180/Math.PI+","+GPSClickedCoordsPointTarget[5]*180/Math.PI;
+    }
+    if (QRCodeScannedData !== 'undefined' && QRCodeCoords !== null)
+    {
+        document.getElementById("QRData").innerHTML = QRCodeScannedData;
+    }
 }
 
 function resetOnscreenDisplay()
@@ -446,6 +507,36 @@ function resetOnscreenDisplay()
     document.getElementById("QRData").innerHTML="-";
 }
 
+/*************************************************************************************************
+
+                        Function For Connecting of Clicked Points
+
+*************************************************************************************************/
+// Connects Selected Verticies With A Line
+function connectClickedPoints()
+{
+    var c = document.getElementById("layer2");
+    var ctx = c.getContext("2d");
+    ctx.beginPath();
+    var t=2;
+
+    ctx.moveTo(coordinates[0],coordinates[1]);
+
+    while(t<coordinates.length)
+    {
+        ctx.lineTo(coordinates[t],coordinates[t+=1]);
+        t++;
+    }
+    
+    ctx.lineTo(coordinates[0],coordinates[1]);
+    ctx.stroke();
+}
+
+/*************************************************************************************************
+
+                    Functions For Reading Image Metadata and QR Code Data
+
+*************************************************************************************************/
 function metadata2Variables()
 {
     lat1=imageData[0]*Math.PI/180; // converts deg to rad
@@ -455,6 +546,80 @@ function metadata2Variables()
     timestamp=imageData[4];
 }
 
+function transferQRCodeImage()
+    {
+        qr= new QrCode();
+        qr.callback= function(result)
+        {
+            QRCodeScannedData=result;
+            alert(result);
+            //console.log(result); // this is the info we get from the QR Code
+        }
+        setWidth = Math.abs(Math.round(QRCodeCoords[0]-QRCodeCoords[2]));
+        setHeight = Math.abs(Math.round(QRCodeCoords[1]-QRCodeCoords[3]));
+
+        var c1 = document.getElementById("myCanvas");
+        var c2 = document.getElementById("qrcodedata");
+        var ctx1 = c1.getContext("2d");
+        var ctx2 = c2.getContext("2d");
+
+        var imgData1 = ctx1.getImageData(QRCodeCoords[0],QRCodeCoords[1],setWidth,setHeight);
+        ctx2.putImageData(imgData1,0,0);
+        qr.decode(imgData1); // decodes the QR Code to get the result
+    }
+/*************************************************************************************************
+
+        Functions For Adding Data to Master Array and Printing Master Array to Data Log
+
+*************************************************************************************************/
+function data2Master()
+{
+
+    var now = new moment();
+    
+    masterData[0]=now.format("HH:mm:ss");
+
+    masterCounter=1;
+
+    masterData[masterCounter]=A;
+    masterCounter++;
+
+    masterData[masterCounter]=centroidLat;
+    masterCounter++;
+
+    masterData[masterCounter]=centroidLong;
+    masterCounter++;
+
+    for(var j=0;j<GPSClickedCoordsProbeDrop.length;j++)
+    {
+        masterData[masterCounter]=GPSClickedCoordsProbeDrop[j];
+        masterCounter++;
+    }
+
+    for(var j=0;j<GPSClickedCoordsPointTarget.length;j++)
+    {
+        masterData[masterCounter]=GPSClickedCoordsPointTarget[j];
+        masterCounter++;
+    }
+
+    console.log(masterData);
+    write2DataLog();
+}
+
+function write2DataLog()
+{
+    fs.appendFile("C:/Users/Eric/human-vision/DataLogs/Log.txt", masterData +"\r\n", function(err) // \r\n is a line break
+        {  
+            if (err) throw err;
+        }
+)};
+
+/*************************************************************************************************
+
+        Functions to Calculate GPS Coordinate from Click Location
+
+*************************************************************************************************/
+// Takes Clicked Pixel Coordinates and Calculates Distance From Known GPS Coordiate
 function pixelDistanceFromCenter()
 {
     
@@ -464,12 +629,18 @@ function pixelDistanceFromCenter()
     //alert(distance+"km");
 };
 
+// Calculates new GPS Coordinate based on distance from known GPS Coordinate
 function computeNewCoordinates(lat1,long1,distance,R,heading)
 {
     lat2= (Math.asin(Math.sin(lat1)*Math.cos(distance/R) + Math.cos(lat1)*Math.sin(distance/R)*Math.cos(heading)));//*180/Math.PI;
     long2 = (long1 + Math.atan2(Math.sin(heading)*Math.sin(distance/R)*Math.cos(lat1), Math.cos(distance/R)-Math.sin(lat1)*Math.sin(lat2)));//*180/Math.PI;
 };
 
+/*************************************************************************************************
+
+Stores Calculated GPS Coordinates in an appropriate array for Select Verticies, Probe Drop and Point Target
+
+*************************************************************************************************/
 function storeClickedCoords()
 {
     GPSClickedCoords[coordsCount]=lat2;
@@ -502,7 +673,12 @@ function storePTClickedCoords()
     //alert(GPSClickedCoordsPointTarget);
 }
 
-function getGPSCoord()
+/*************************************************************************************************
+
+        Compute GPS Coordinates for Select Verticies, Probe Drop and Point Target
+
+*************************************************************************************************/
+function computeSelectVerticiesGPSCoord()
 {
     pixelDistanceFromCenter();
 
@@ -751,104 +927,12 @@ function computePointTargetGPSCoords()
     storePTClickedCoords(); 
 }
 
-function data2Master()
-{
 
-    var now = new moment();
-    
-    masterData[0]=now.format("HH:mm:ss");
+/*************************************************************************************************
 
-    masterCounter=1;
+            Computes the distance between two GPS Coordinates
 
-    masterData[masterCounter]=A;
-    masterCounter++;
-
-    masterData[masterCounter]=centroidLat;
-    masterCounter++;
-
-    masterData[masterCounter]=centroidLong;
-    masterCounter++;
-
-    for(var j=0;j<GPSClickedCoordsProbeDrop.length;j++)
-    {
-        masterData[masterCounter]=GPSClickedCoordsProbeDrop[j];
-        masterCounter++;
-    }
-
-    for(var j=0;j<GPSClickedCoordsPointTarget.length;j++)
-    {
-        masterData[masterCounter]=GPSClickedCoordsPointTarget[j];
-        masterCounter++;
-    }
-
-    console.log(masterData);
-    write2DataLog();
-}
-
-function data2Screen()
-{
-    if (typeof A !== 'undefined' && A !== null && A!==0)
-    {
-        document.getElementById("AreaCalc").innerHTML = A+" m^2";
-    }
-
-    if (typeof centroidLat>0 || centroidLat<0 && centroidLat !==0 && typeof centroidLong>0 || centroidLong<0 && centroidLong!==0)
-    {
-        document.getElementById("CentroidCalc").innerHTML = centroidLat*180/Math.PI+","+centroidLong*180/Math.PI;
-    }
-
-    if (typeof GPSClickedCoordsProbeDrop[0] !== 'undefined' && GPSClickedCoordsProbeDrop[0] !== null && GPSClickedCoordsProbeDrop[0] !==0 && typeof GPSClickedCoordsProbeDrop[1] !== 'undefined' && GPSClickedCoordsProbeDrop[1] !== null && GPSClickedCoordsProbeDrop[1] !==0)
-    {
-        document.getElementById("ProbeDropCalc").innerHTML = GPSClickedCoordsProbeDrop[0]*180/Math.PI+","+GPSClickedCoordsProbeDrop[1]*180/Math.PI;    
-    }
-
-    if (GPSClickedCoordsPointTarget[0] !== 'undefined' && GPSClickedCoordsPointTarget[0] !== null && GPSClickedCoordsPointTarget[0] !==0 && typeof GPSClickedCoordsPointTarget[1] !== 'undefined' && GPSClickedCoordsPointTarget[1] !== null && GPSClickedCoordsPointTarget[1] !==0)
-    { 
-        document.getElementById("PointTargetCalcPT1").innerHTML = GPSClickedCoordsPointTarget[0]*180/Math.PI+","+GPSClickedCoordsPointTarget[1]*180/Math.PI;
-    }
-
-    if (GPSClickedCoordsPointTarget[2] !== 'undefined' && GPSClickedCoordsPointTarget[2] !== null && GPSClickedCoordsPointTarget[2] !==0 && typeof GPSClickedCoordsPointTarget[3] !== 'undefined' && GPSClickedCoordsPointTarget[3] !== null && GPSClickedCoordsPointTarget[3] !==0)
-    { 
-        document.getElementById("PointTargetCalcPT2").innerHTML = GPSClickedCoordsPointTarget[2]*180/Math.PI+","+GPSClickedCoordsPointTarget[3]*180/Math.PI;
-    }
-
-    if (GPSClickedCoordsPointTarget[4] !== 'undefined' && GPSClickedCoordsPointTarget[4] !== null && GPSClickedCoordsPointTarget[4] !==0 && typeof GPSClickedCoordsPointTarget[5] !== 'undefined' && GPSClickedCoordsPointTarget[5] !== null && GPSClickedCoordsPointTarget[5] !==0)
-    { 
-        document.getElementById("PointTargetCalcPT3").innerHTML = GPSClickedCoordsPointTarget[4]*180/Math.PI+","+GPSClickedCoordsPointTarget[5]*180/Math.PI;
-    }
-    if (QRCodeScannedData !== 'undefined' && QRCodeCoords !== null)
-    {
-        document.getElementById("QRData").innerHTML = QRCodeScannedData;
-    }
-}
-
-function connectClickedPoints()
-{
-    var c = document.getElementById("layer2");
-    var ctx = c.getContext("2d");
-    ctx.beginPath();
-    var t=2;
-
-    ctx.moveTo(coordinates[0],coordinates[1]);
-
-    while(t<coordinates.length)
-    {
-        ctx.lineTo(coordinates[t],coordinates[t+=1]);
-        t++;
-    }
-    
-    ctx.lineTo(coordinates[0],coordinates[1]);
-    ctx.stroke();
-}
-
-function write2DataLog()
-{
-    fs.appendFile("C:/Users/Eric/human-vision/DataLogs/Log.txt", masterData +"\r\n", function(err) // \r\n is a line break
-        {  
-            if (err) throw err;
-        }
-)};
-
+*************************************************************************************************/
 function distBetweenPoints()
 {   
     while (counter1<=GPSClickedCoords.length-2)
@@ -877,6 +961,108 @@ function distBetweenPoints()
 
     //alert("Distance is "+groundDistBetweenPoints);
 }
+
+/*************************************************************************************************
+
+            Computes additional distances needed for calculating area
+
+*************************************************************************************************/
+function squareExtraDistances()
+{
+    a = Math.pow(Math.sin((GPSClickedCoords[4]-GPSClickedCoords[0])/2),2)+Math.cos(GPSClickedCoords[4])*Math.cos(GPSClickedCoords[0])*Math.pow(Math.sin(GPSClickedCoords[5]-GPSClickedCoords[1])/2,2);
+    c = 2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+    groundDistBetweenPoints[4]=R*c*1000;
+    //alert("Extra length: "+groundDistBetweenPoints[4]);
+}
+
+function pentagonExtraDistances()
+{
+    a = Math.pow(Math.sin((GPSClickedCoords[4]-GPSClickedCoords[0])/2),2)+Math.cos(GPSClickedCoords[4])*Math.cos(GPSClickedCoords[0])*Math.pow(Math.sin(GPSClickedCoords[5]-GPSClickedCoords[1])/2,2);
+    c = 2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+    groundDistBetweenPoints[5]=R*c*1000;
+    //alert("First extra length: "+groundDistBetweenPoints[5]);
+
+    a = Math.pow(Math.sin((GPSClickedCoords[6]-GPSClickedCoords[0])/2),2)+Math.cos(GPSClickedCoords[6])*Math.cos(GPSClickedCoords[0])*Math.pow(Math.sin(GPSClickedCoords[7]-GPSClickedCoords[1])/2,2);
+    c = 2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+    groundDistBetweenPoints[6]=R*c*1000;
+    //alert("Second extra length: "+groundDistBetweenPoints[6]);
+}
+
+function hexagonExtraDistances()
+{
+    a = Math.pow(Math.sin((GPSClickedCoords[4]-GPSClickedCoords[0])/2),2)+Math.cos(GPSClickedCoords[4])*Math.cos(GPSClickedCoords[0])*Math.pow(Math.sin(GPSClickedCoords[5]-GPSClickedCoords[1])/2,2);
+    c = 2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+    groundDistBetweenPoints[6]=R*c*1000;
+    //alert("First extra length: "+groundDistBetweenPoints[6]);
+
+    a = Math.pow(Math.sin((GPSClickedCoords[10]-GPSClickedCoords[6])/2),2)+Math.cos(GPSClickedCoords[10])*Math.cos(GPSClickedCoords[6])*Math.pow(Math.sin(GPSClickedCoords[11]-GPSClickedCoords[7])/2,2);
+    c = 2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+    groundDistBetweenPoints[7]=R*c*1000;
+    //alert("Second extra length: "+groundDistBetweenPoints[7]);
+
+    a = Math.pow(Math.sin((GPSClickedCoords[6]-GPSClickedCoords[0])/2),2)+Math.cos(GPSClickedCoords[6])*Math.cos(GPSClickedCoords[0])*Math.pow(Math.sin(GPSClickedCoords[7]-GPSClickedCoords[1])/2,2);
+    c = 2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+    groundDistBetweenPoints[8]=R*c*1000;
+    //alert("Third extra length: "+groundDistBetweenPoints[8]);
+}
+
+function heptagonExtraDistances()
+{
+    a = Math.pow(Math.sin((GPSClickedCoords[6]-GPSClickedCoords[2])/2),2)+Math.cos(GPSClickedCoords[6])*Math.cos(GPSClickedCoords[2])*Math.pow(Math.sin(GPSClickedCoords[7]-GPSClickedCoords[3])/2,2);
+    c = 2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+    groundDistBetweenPoints[7]=R*c*1000;
+    //alert("First extra length: "+groundDistBetweenPoints[7]);
+
+    a = Math.pow(Math.sin((GPSClickedCoords[12]-GPSClickedCoords[8])/2),2)+Math.cos(GPSClickedCoords[12])*Math.cos(GPSClickedCoords[8])*Math.pow(Math.sin(GPSClickedCoords[13]-GPSClickedCoords[9])/2,2);
+    c = 2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+    groundDistBetweenPoints[8]=R*c*1000;
+    //alert("Second extra length: "+groundDistBetweenPoints[8]);
+
+    a = Math.pow(Math.sin((GPSClickedCoords[6]-GPSClickedCoords[0])/2),2)+Math.cos(GPSClickedCoords[6])*Math.cos(GPSClickedCoords[0])*Math.pow(Math.sin(GPSClickedCoords[7]-GPSClickedCoords[1])/2,2);
+    c = 2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+    groundDistBetweenPoints[9]=R*c*1000;
+    //alert("Third extra length: "+groundDistBetweenPoints[9]);
+
+    a = Math.pow(Math.sin((GPSClickedCoords[8]-GPSClickedCoords[0])/2),2)+Math.cos(GPSClickedCoords[8])*Math.cos(GPSClickedCoords[0])*Math.pow(Math.sin(GPSClickedCoords[9]-GPSClickedCoords[1])/2,2);
+    c = 2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+    groundDistBetweenPoints[10]=R*c*1000;
+    //alert("Fourth extra length: "+groundDistBetweenPoints[10]);
+}
+
+function octagonExtraDistances()
+{
+    a = Math.pow(Math.sin((GPSClickedCoords[6]-GPSClickedCoords[0])/2),2)+Math.cos(GPSClickedCoords[6])*Math.cos(GPSClickedCoords[0])*Math.pow(Math.sin(GPSClickedCoords[7]-GPSClickedCoords[1])/2,2);
+    c = 2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+    groundDistBetweenPoints[8]=R*c*1000;
+    //alert("First extra length: "+groundDistBetweenPoints[8]);
+
+    a = Math.pow(Math.sin((GPSClickedCoords[14]-GPSClickedCoords[8])/2),2)+Math.cos(GPSClickedCoords[14])*Math.cos(GPSClickedCoords[8])*Math.pow(Math.sin(GPSClickedCoords[15]-GPSClickedCoords[9])/2,2);
+    c = 2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+    groundDistBetweenPoints[9]=R*c*1000;
+    //alert("Second extra length: "+groundDistBetweenPoints[9]);
+
+    a = Math.pow(Math.sin((GPSClickedCoords[6]-GPSClickedCoords[2])/2),2)+Math.cos(GPSClickedCoords[6])*Math.cos(GPSClickedCoords[2])*Math.pow(Math.sin(GPSClickedCoords[7]-GPSClickedCoords[3])/2,2);
+    c = 2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+    groundDistBetweenPoints[10]=R*c*1000;
+    // alert("Third extra length: "+groundDistBetweenPoints[10]);
+
+    a = Math.pow(Math.sin((GPSClickedCoords[12]-GPSClickedCoords[8])/2),2)+Math.cos(GPSClickedCoords[12])*Math.cos(GPSClickedCoords[8])*Math.pow(Math.sin(GPSClickedCoords[13]-GPSClickedCoords[9])/2,2);
+    c = 2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+    groundDistBetweenPoints[11]=R*c*1000;
+    //alert("Fourth extra length: "+groundDistBetweenPoints[11]);
+
+    a = Math.pow(Math.sin((GPSClickedCoords[8]-GPSClickedCoords[0])/2),2)+Math.cos(GPSClickedCoords[8])*Math.cos(GPSClickedCoords[0])*Math.pow(Math.sin(GPSClickedCoords[9]-GPSClickedCoords[1])/2,2);
+    c = 2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+    groundDistBetweenPoints[12]=R*c*1000;
+    //alert("Fifth extra length: "+groundDistBetweenPoints[12]);
+}
+
+/*************************************************************************************************
+
+                Function for Computing the Area of the Target
+
+*************************************************************************************************/
+// Master function to check which shape the area is based on number of clicks
 
 function calculateArea()
 {
@@ -912,6 +1098,8 @@ function calculateArea()
     }
     alert("Area is "+A);
 }
+
+// Component functions for calculating the area of each shape
 
 function triangleArea()
 {
@@ -1034,95 +1222,11 @@ function octagonArea()
     A=A1+A2+A3+A4+A5+A6;
 }
 
-function squareExtraDistances()
-{
-    a = Math.pow(Math.sin((GPSClickedCoords[4]-GPSClickedCoords[0])/2),2)+Math.cos(GPSClickedCoords[4])*Math.cos(GPSClickedCoords[0])*Math.pow(Math.sin(GPSClickedCoords[5]-GPSClickedCoords[1])/2,2);
-    c = 2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-    groundDistBetweenPoints[4]=R*c*1000;
-    //alert("Extra length: "+groundDistBetweenPoints[4]);
-}
+/*************************************************************************************************
 
-function pentagonExtraDistances()
-{
-    a = Math.pow(Math.sin((GPSClickedCoords[4]-GPSClickedCoords[0])/2),2)+Math.cos(GPSClickedCoords[4])*Math.cos(GPSClickedCoords[0])*Math.pow(Math.sin(GPSClickedCoords[5]-GPSClickedCoords[1])/2,2);
-    c = 2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-    groundDistBetweenPoints[5]=R*c*1000;
-    //alert("First extra length: "+groundDistBetweenPoints[5]);
+                Function for calculating the centroid of selected target area
 
-    a = Math.pow(Math.sin((GPSClickedCoords[6]-GPSClickedCoords[0])/2),2)+Math.cos(GPSClickedCoords[6])*Math.cos(GPSClickedCoords[0])*Math.pow(Math.sin(GPSClickedCoords[7]-GPSClickedCoords[1])/2,2);
-    c = 2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-    groundDistBetweenPoints[6]=R*c*1000;
-    //alert("Second extra length: "+groundDistBetweenPoints[6]);
-}
-
-function hexagonExtraDistances()
-{
-    a = Math.pow(Math.sin((GPSClickedCoords[4]-GPSClickedCoords[0])/2),2)+Math.cos(GPSClickedCoords[4])*Math.cos(GPSClickedCoords[0])*Math.pow(Math.sin(GPSClickedCoords[5]-GPSClickedCoords[1])/2,2);
-    c = 2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-    groundDistBetweenPoints[6]=R*c*1000;
-    //alert("First extra length: "+groundDistBetweenPoints[6]);
-
-    a = Math.pow(Math.sin((GPSClickedCoords[10]-GPSClickedCoords[6])/2),2)+Math.cos(GPSClickedCoords[10])*Math.cos(GPSClickedCoords[6])*Math.pow(Math.sin(GPSClickedCoords[11]-GPSClickedCoords[7])/2,2);
-    c = 2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-    groundDistBetweenPoints[7]=R*c*1000;
-    //alert("Second extra length: "+groundDistBetweenPoints[7]);
-
-    a = Math.pow(Math.sin((GPSClickedCoords[6]-GPSClickedCoords[0])/2),2)+Math.cos(GPSClickedCoords[6])*Math.cos(GPSClickedCoords[0])*Math.pow(Math.sin(GPSClickedCoords[7]-GPSClickedCoords[1])/2,2);
-    c = 2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-    groundDistBetweenPoints[8]=R*c*1000;
-    //alert("Third extra length: "+groundDistBetweenPoints[8]);
-}
-
-function heptagonExtraDistances()
-{
-    a = Math.pow(Math.sin((GPSClickedCoords[6]-GPSClickedCoords[2])/2),2)+Math.cos(GPSClickedCoords[6])*Math.cos(GPSClickedCoords[2])*Math.pow(Math.sin(GPSClickedCoords[7]-GPSClickedCoords[3])/2,2);
-    c = 2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-    groundDistBetweenPoints[7]=R*c*1000;
-    //alert("First extra length: "+groundDistBetweenPoints[7]);
-
-    a = Math.pow(Math.sin((GPSClickedCoords[12]-GPSClickedCoords[8])/2),2)+Math.cos(GPSClickedCoords[12])*Math.cos(GPSClickedCoords[8])*Math.pow(Math.sin(GPSClickedCoords[13]-GPSClickedCoords[9])/2,2);
-    c = 2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-    groundDistBetweenPoints[8]=R*c*1000;
-    //alert("Second extra length: "+groundDistBetweenPoints[8]);
-
-    a = Math.pow(Math.sin((GPSClickedCoords[6]-GPSClickedCoords[0])/2),2)+Math.cos(GPSClickedCoords[6])*Math.cos(GPSClickedCoords[0])*Math.pow(Math.sin(GPSClickedCoords[7]-GPSClickedCoords[1])/2,2);
-    c = 2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-    groundDistBetweenPoints[9]=R*c*1000;
-    //alert("Third extra length: "+groundDistBetweenPoints[9]);
-
-    a = Math.pow(Math.sin((GPSClickedCoords[8]-GPSClickedCoords[0])/2),2)+Math.cos(GPSClickedCoords[8])*Math.cos(GPSClickedCoords[0])*Math.pow(Math.sin(GPSClickedCoords[9]-GPSClickedCoords[1])/2,2);
-    c = 2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-    groundDistBetweenPoints[10]=R*c*1000;
-    //alert("Fourth extra length: "+groundDistBetweenPoints[10]);
-}
-
-function octagonExtraDistances()
-{
-    a = Math.pow(Math.sin((GPSClickedCoords[6]-GPSClickedCoords[0])/2),2)+Math.cos(GPSClickedCoords[6])*Math.cos(GPSClickedCoords[0])*Math.pow(Math.sin(GPSClickedCoords[7]-GPSClickedCoords[1])/2,2);
-    c = 2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-    groundDistBetweenPoints[8]=R*c*1000;
-    //alert("First extra length: "+groundDistBetweenPoints[8]);
-
-    a = Math.pow(Math.sin((GPSClickedCoords[14]-GPSClickedCoords[8])/2),2)+Math.cos(GPSClickedCoords[14])*Math.cos(GPSClickedCoords[8])*Math.pow(Math.sin(GPSClickedCoords[15]-GPSClickedCoords[9])/2,2);
-    c = 2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-    groundDistBetweenPoints[9]=R*c*1000;
-    //alert("Second extra length: "+groundDistBetweenPoints[9]);
-
-    a = Math.pow(Math.sin((GPSClickedCoords[6]-GPSClickedCoords[2])/2),2)+Math.cos(GPSClickedCoords[6])*Math.cos(GPSClickedCoords[2])*Math.pow(Math.sin(GPSClickedCoords[7]-GPSClickedCoords[3])/2,2);
-    c = 2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-    groundDistBetweenPoints[10]=R*c*1000;
-    // alert("Third extra length: "+groundDistBetweenPoints[10]);
-
-    a = Math.pow(Math.sin((GPSClickedCoords[12]-GPSClickedCoords[8])/2),2)+Math.cos(GPSClickedCoords[12])*Math.cos(GPSClickedCoords[8])*Math.pow(Math.sin(GPSClickedCoords[13]-GPSClickedCoords[9])/2,2);
-    c = 2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-    groundDistBetweenPoints[11]=R*c*1000;
-    //alert("Fourth extra length: "+groundDistBetweenPoints[11]);
-
-    a = Math.pow(Math.sin((GPSClickedCoords[8]-GPSClickedCoords[0])/2),2)+Math.cos(GPSClickedCoords[8])*Math.cos(GPSClickedCoords[0])*Math.pow(Math.sin(GPSClickedCoords[9]-GPSClickedCoords[1])/2,2);
-    c = 2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-    groundDistBetweenPoints[12]=R*c*1000;
-    //alert("Fifth extra length: "+groundDistBetweenPoints[12]);
-}
+*************************************************************************************************/
 
 function calculateCentroidCoords()
 {
@@ -1142,76 +1246,80 @@ function calculateCentroidCoords()
 
 
 
-// var c = document.createElement("qrcodedata");
-// var img = document.getElementById("qrcode");
-// ctx.drawImage(img, 0, 0 );
-// var myData = ctx.getImageData(0, 0, img.width, img.height);
-// qr.decode(myData);
-// console.log(myData);
 
+// Supposed to be a simpler algorithm but its broken
+// var ss;
+// var AA = new Array();
+// var AreaTotal;
 
-function transferQRCodeImage()
-    {
-        qr= new QrCode();
-        qr.callback= function(result)
-        {
-            QRCodeScannedData=result;
-            alert(result);
-            //console.log(result); // this is the info we get from the QR Code
-        }
-        setWidth = Math.abs(Math.round(QRCodeCoords[0]-QRCodeCoords[2]));
-        setHeight = Math.abs(Math.round(QRCodeCoords[1]-QRCodeCoords[3]));
+// function computeArea()
+// {
+//     computeExtraDistances();
 
-        var c1 = document.getElementById("myCanvas");
-        var c2 = document.getElementById("qrcodedata");
-        var ctx1 = c1.getContext("2d");
-        var ctx2 = c2.getContext("2d");
+//     var countArea = GPSClickedCoords.length/2;
+//     var countCase1=countArea;
+//     var countCase21=countArea;
+//     var countCase22=countArea+1;
+//     var countCase23=2;
+//     var countCase3=countArea-1;
+//     var caseCounter=0;
 
-        var imgData1 = ctx1.getImageData(QRCodeCoords[0],QRCodeCoords[1],setWidth,setHeight);
-        ctx2.putImageData(imgData1,0,0);
-        qr.decode(imgData1); // decodes the QR Code to get the result
-    }
-        // document.getElementById("myCanvas").onload = function ya()
-        // {
-        //     var c=document.getElementById("qrcodedata");
-        //     var ctx=c.getContext("2d");
-        //     var imgData=ctx.createImageData(100,100);
-        //     for (var i=0;i<imgData.data.length;i+=4)
-        //     {
-        //         imgData.data[i+0]=255;
-        //         imgData.data[i+1]=0;
-        //         imgData.data[i+2]=0;
-        //         imgData.data[i+3]=255;
-        //     }
-        //     ctx.putImageData(imgData,0,0);
-        // }
+//     for (var i=0;i<(countArea-2);i++)
+//     {
+        
+//         if (countArea==3)
+//         {
+//             alert("Case 0: Single Triangle");
+//             ss= (groundDistBetweenPoints[0]+groundDistBetweenPoints[1]+groundDistBetweenPoints[2])/2;
+//             AA[i]= Math.sqrt(ss*(ss-groundDistBetweenPoints[0])*(ss-groundDistBetweenPoints[1])*(ss-groundDistBetweenPoints[2]));
+//             i=99;
+//         }
+//         else if (caseCounter==0)
+//         {   
+//             alert("Case 1: First Triangle");
+//             ss= (groundDistBetweenPoints[0]+groundDistBetweenPoints[1]+groundDistBetweenPoints[countCase1])/2;
+//             AA[i]= Math.sqrt(ss*(ss-groundDistBetweenPoints[0])*(ss-groundDistBetweenPoints[1])*(ss-groundDistBetweenPoints[countCase1]));           
+//         }
+//         else if (caseCounter>0 && caseCounter==(countArea-3))
+//         {
+//             alert("Case 3: Last Triangle");
+//             ss= (groundDistBetweenPoints[countCase3]+groundDistBetweenPoints[countCase3-1]+groundDistBetweenPoints[numberOfPoints])/2;
+//             AA[i]= Math.sqrt(ss*(ss-groundDistBetweenPoints[countCase3])*(ss-groundDistBetweenPoints[countCase3-1])*(ss-groundDistBetweenPoints[numberOfPoints]));
+//         }
+//         else if (caseCounter>0 && caseCounter<(countArea-3))
+//         {
+//             alert("Case 2: Middle Triangles");
+//             ss= (groundDistBetweenPoints[countCase23]+groundDistBetweenPoints[countCase21]+groundDistBetweenPoints[countCase22])/2;
+//             AA[i]= Math.sqrt(ss*(ss-groundDistBetweenPoints[countCase23])*(ss-groundDistBetweenPoints[countCase21])*(ss-groundDistBetweenPoints[countCase22]));
+//             countCase21++;
+//             countCase22++;
+//             countCase23++;
+//         }
+//         caseCounter++;
+//     }
+//     AreaTotal = AA.reduce(function(pv, cv) { return pv + cv; }, 0);
+//     alert("Way2: "+AreaTotal);
+// }
 
+// var numberOfPoints;
 
-        // alert(setWidth+","+setHeight);
+// function computeExtraDistances()
+// {
+//     numberOfPoints = GPSClickedCoords.length/2;
+//     var anotherCounter = numberOfPoints;
+//     alert(numberOfPoints);
 
-        // var c = document.getElementById("qrcodedata");
-        // var ctx = c.getContext("2d");
-        // var img= document.getElementById("myCanvas");
-        // alert("here");
-        // ctx.drawImage(img,0,0,100,100);
-        // var QRCodePixels = ctx.getImageData(QRCodeCoords[0],QRCodeCoords[1],setWidth,setHeight);
-        // alert("there");
-        // qr= new QrCode();
-        // qr.callback= function(result)
-        // {
-        //     alert(result);
-        //     console.log(result); // this is the info we get from the QR Code
-        // }
-
-        // var c = document.getElementById("qrcodedata");
-        // var ctx = c.getContext("2d");
-        // //var img = document.getElementById("qrcode");
-        // var myData = ctx.drawImage(img,0,0,100,100);
-        // var imgData = ctx.getImageData(0,0,150,150);
-
-        // qr.decode(imgData); // decodes the QR Code to get the result
-    
-// var c = document.getElementById("consoleDisplay");
-// var ctx = c.getContext("2d");
-// ctx.fillStyle="15px Arial";
-// ctx.fillText("hi",10,10);
+//     if (numberOfPoints==3)
+//     {}
+//     else
+//     {
+//         for (var i=2;i<(numberOfPoints-1);i++)
+//         {
+//             a = Math.pow(Math.sin((GPSClickedCoords[i]-GPSClickedCoords[0])/2),2)+Math.cos(GPSClickedCoords[i])*Math.cos(GPSClickedCoords[0])*Math.pow(Math.sin(GPSClickedCoords[i+1]-GPSClickedCoords[1])/2,2);            
+//             c = 2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+//             groundDistBetweenPoints[anotherCounter]=R*c*1000;
+//             alert("Extra distance of: "+groundDistBetweenPoints[anotherCounter]);
+//             anotherCounter++;        
+//         }
+//     }
+// }
