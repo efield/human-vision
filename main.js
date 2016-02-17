@@ -142,6 +142,7 @@ function resetVariables()
 
     QRCodeCoords=[];
     countQR=0;
+    //QRCodeScannedData=0; Will display error code when this is commented out
 }
 /*************************************************************************************************
 
@@ -163,7 +164,7 @@ document.getElementById("NoTarget").onclick = function transferDeleted()
                     alert("File successfully Deleted");
                 })
         })
-};    
+}    
 
 // Loads newest image from folder into the canvas
 document.getElementById("Load").onclick = function loadNewImage() 
@@ -171,11 +172,7 @@ document.getElementById("Load").onclick = function loadNewImage()
     resetVariables();
     removeEventListeners();
     resetOnscreenDisplay();
-
-    var c = document.getElementById("layer2");
-    var ctx = c.getContext("2d");
-    ctx.beginPath();
-    ctx.clearRect(0, 0, layer2.width, layer2.height);
+    clearDisplays();
 
     fs.readdir("../human-vision/Images_2_Process", function(err, files2)
     {
@@ -262,16 +259,7 @@ document.getElementById("Clear").onclick = function clearLayer()
         resetVariables();
         removeEventListeners();
         resetOnscreenDisplay();
-
-        var c = document.getElementById("layer2");
-        var ctx = c.getContext("2d");
-        ctx.beginPath();
-        ctx.clearRect(0, 0, layer2.width, layer2.height);
-
-        var c1 = document.getElementById("qrcodedata");
-        var ctx1 = c1.getContext("2d");
-        ctx1.beginPath();
-        ctx1.clearRect(0,0,qrcodedata.width,qrcodedata.height);
+        clearDisplays();
     }
 
 // Connects the selected verticies and does necessary calculations. Works for shapes with up to 8 verticies
@@ -434,7 +422,6 @@ function getQRCodeCoords(e)
         ctx.fillStyle="#551a8b";
         ctx.fillRect(x,y,7,7);
         ctx.stroke();
-        alert(QRCodeCoords);
 
         if (countQR==4)
         {
@@ -490,7 +477,7 @@ function data2Screen()
     { 
         document.getElementById("PointTargetCalcPT3").innerHTML = GPSClickedCoordsPointTarget[4]*180/Math.PI+","+GPSClickedCoordsPointTarget[5]*180/Math.PI;
     }
-    if (QRCodeScannedData !== 'undefined' && QRCodeCoords !== null)
+    if (QRCodeScannedData !== 'Undefined' && QRCodeCoords !== null && QRCodeScannedData!==0)
     {
         document.getElementById("QRData").innerHTML = QRCodeScannedData;
     }
@@ -505,6 +492,19 @@ function resetOnscreenDisplay()
     document.getElementById("PointTargetCalcPT2").innerHTML = "-,-";
     document.getElementById("PointTargetCalcPT3").innerHTML = "-,-";
     document.getElementById("QRData").innerHTML="-";
+}
+
+function clearDisplays()
+{
+    var c = document.getElementById("layer2");
+    var ctx = c.getContext("2d");
+    ctx.beginPath();
+    ctx.clearRect(0, 0, layer2.width, layer2.height);
+
+    var c1 = document.getElementById("qrcodedata");
+    var ctx1 = c1.getContext("2d");
+    ctx1.beginPath();
+    ctx1.clearRect(0,0,qrcodedata.width,qrcodedata.height);
 }
 
 /*************************************************************************************************
@@ -630,7 +630,7 @@ function pixelDistanceFromCenter()
 };
 
 // Calculates new GPS Coordinate based on distance from known GPS Coordinate
-function computeNewCoordinates(lat1,long1,distance,R,heading)
+function computeNewCoordinates()
 {
     lat2= (Math.asin(Math.sin(lat1)*Math.cos(distance/R) + Math.cos(lat1)*Math.sin(distance/R)*Math.cos(heading)));//*180/Math.PI;
     long2 = (long1 + Math.atan2(Math.sin(heading)*Math.sin(distance/R)*Math.cos(lat1), Math.cos(distance/R)-Math.sin(lat1)*Math.sin(lat2)));//*180/Math.PI;
@@ -678,11 +678,10 @@ function storePTClickedCoords()
         Compute GPS Coordinates for Select Verticies, Probe Drop and Point Target
 
 *************************************************************************************************/
-function computeSelectVerticiesGPSCoord()
+// Uses Distance calculated from click to compute new GPS coordinate based on 9 cases
+function computeGPSCoordFromCase()
 {
-    pixelDistanceFromCenter();
-
-    if (deltaW==0 && deltaH==0)
+        if (deltaW==0 && deltaH==0)
     {
         heading = initialHeading*180/Math.PI;
         lat2 = lat1;//*180/Math.PI;
@@ -715,7 +714,7 @@ function computeSelectVerticiesGPSCoord()
         lat2 = lat1;//*180/Math.PI;
         heading=(initialHeading+Math.PI/2)*180/Math.PI;
         
-        //alert("Case 4: "+lat2+", "+long2+", "+heading+"deg");  
+        //alert("Case 4: "+lat2+", "+long2+", "+heading+"deg"); 
     }
     else if (deltaW<0 && deltaH==0)
     {
@@ -729,7 +728,7 @@ function computeSelectVerticiesGPSCoord()
     else if (deltaW>0 && deltaH<0)
     {   
         heading = initialHeading + (Math.atan(deltaW/(-1*deltaH))); //*Math.PI/180;
-        computeNewCoordinates(lat1,long1,distance,R,heading);
+        computeNewCoordinates();
         headingDeg = heading*180/Math.PI;
         
         //alert("Case 6: "+lat2+", "+long2+", "+headingDeg+" deg");
@@ -737,7 +736,7 @@ function computeSelectVerticiesGPSCoord()
     else if (deltaW>0 && deltaH>0)
     {
         heading = initialHeading + Math.PI - (Math.atan(deltaW/deltaH));    //*Math.PI/180;
-        computeNewCoordinates(lat1,long1,distance,R,heading);
+        computeNewCoordinates();
         headingDeg = heading*180/Math.PI;
         
         //alert("Case 7: "+lat2+", "+long2+", "+headingDeg+" deg");
@@ -745,7 +744,7 @@ function computeSelectVerticiesGPSCoord()
     else if (deltaW<0 && deltaH>0)
     {
         heading = initialHeading + Math.PI + (Math.atan((-1*deltaW)/deltaH));   //*Math.PI/180;
-        computeNewCoordinates(lat1,long1,distance,R,heading);
+        computeNewCoordinates();
         headingDeg = heading*180/Math.PI;
         
         //alert("Case 8: "+lat2+", "+long2+", "+headingDeg+" deg");
@@ -753,180 +752,33 @@ function computeSelectVerticiesGPSCoord()
     else
     {
         heading = initialHeading + 2*Math.PI - (Math.atan(deltaW/deltaH));  //*Math.PI/180;
-        computeNewCoordinates(lat1,long1,distance,R,heading);
+        computeNewCoordinates();
         headingDeg = heading*180/Math.PI;
-        
+
         //alert("Case 9: "+lat2+", "+long2+", "+headingDeg+" deg");
     }
+}
+
+function computeSelectVerticiesGPSCoord()
+{
+    pixelDistanceFromCenter();
+    computeGPSCoordFromCase();
     storeClickedCoords();
 };
 
 function computeProbeDropGPSCoords()
 {
     pixelDistanceFromCenter();
-
-    if (deltaW==0 && deltaH==0)
-    {
-        heading = initialHeading*180/Math.PI;
-        lat2 = lat1;//*180/Math.PI;
-        long2 = long1;//*180/Math.PI;
-        
-        alert("Case 1: "+lat2+", "+long2+", "+heading+"deg");
-    }
-    else if (deltaW==0 && deltaH<0)
-    {
-        //long2=long1
-        lat2= (Math.asin(Math.sin(lat1)*Math.cos(distance/R) + Math.cos(lat1)*Math.sin(distance/R)*Math.cos(initialHeading)));//*180/Math.PI;
-        long2 = long1;//*180/Math.PI;
-        heading = initialHeading*180/Math.PI;
-        
-        alert("Case 2: "+lat2+", "+long2+", "+heading+"deg");
-    }
-    else if (deltaW==0 && deltaH>0)
-    {
-        //long2=long1
-        lat2= (Math.asin(Math.sin(lat1)*Math.cos(distance/R) + Math.cos(lat1)*Math.sin(distance/R)*Math.cos(initialHeading+Math.PI)));//*180/Math.PI;
-        long2=long1;//*180/Math.PI;
-        heading = (initialHeading+Math.PI)*180/Math.PI;
-
-        alert("Case 3: "+lat2+", "+long2+", "+heading+"deg");
-    }
-    else if (deltaW>0 && deltaH==0)
-    {
-        //lat2=lat1;
-        long2 = (long1 + Math.atan2(Math.sin(initialHeading+(Math.PI/2))*Math.sin(distance/R)*Math.cos(lat1), Math.cos(distance/R)-Math.sin(lat1)*Math.sin(lat1)));//*180/Math.PI;
-        lat2 = lat1;//*180/Math.PI;
-        heading=(initialHeading+Math.PI/2)*180/Math.PI;
-        
-        alert("Case 4: "+lat2+", "+long2+", "+heading+"deg"); 
-    }
-    else if (deltaW<0 && deltaH==0)
-    {
-        //lat2=lat1;
-        long2 = (long1 + Math.atan2(Math.sin(initialHeading+(3*Math.PI/2))*Math.sin(distance/R)*Math.cos(lat1), Math.cos(distance/R)-Math.sin(lat1)*Math.sin(lat1)));//*180/Math.PI;
-        lat2 = lat1;//*180/Math.PI;
-        heading = (initialHeading+3*Math.PI/2)*180/Math.PI;
-
-        alert("Case 5: "+lat2+", "+long2+", "+heading+"deg");
-    }
-    else if (deltaW>0 && deltaH<0)
-    {   
-        heading = initialHeading + (Math.atan(deltaW/(-1*deltaH))); //*Math.PI/180;
-        computeNewCoordinates(lat1,long1,distance,R,heading);
-        headingDeg = heading*180/Math.PI;
-        
-        alert("Case 6: "+lat2+", "+long2+", "+headingDeg+" deg");
-    }
-    else if (deltaW>0 && deltaH>0)
-    {
-        heading = initialHeading + Math.PI - (Math.atan(deltaW/deltaH));    //*Math.PI/180;
-        computeNewCoordinates(lat1,long1,distance,R,heading);
-        headingDeg = heading*180/Math.PI;
-        
-        alert("Case 7: "+lat2+", "+long2+", "+headingDeg+" deg");
-    }
-    else if (deltaW<0 && deltaH>0)
-    {
-        heading = initialHeading + Math.PI + (Math.atan((-1*deltaW)/deltaH));   //*Math.PI/180;
-        computeNewCoordinates(lat1,long1,distance,R,heading);
-        headingDeg = heading*180/Math.PI;
-        
-        alert("Case 8: "+lat2+", "+long2+", "+headingDeg+" deg");
-    }
-    else
-    {
-        heading = initialHeading + 2*Math.PI - (Math.atan(deltaW/deltaH));  //*Math.PI/180;
-        computeNewCoordinates(lat1,long1,distance,R,heading);
-        headingDeg = heading*180/Math.PI;
-
-        alert("Case 9: "+lat2+", "+long2+", "+headingDeg+" deg");
-    }
+    computeGPSCoordFromCase();
     storePDClickedCoords();
 }
 
 function computePointTargetGPSCoords()
 {
     pixelDistanceFromCenter();
-
-    if (deltaW==0 && deltaH==0)
-    {
-        heading = initialHeading*180/Math.PI;
-        lat2 = lat1;//*180/Math.PI;
-        long2 = long1;//*180/Math.PI;
-        
-        alert("Case 1: "+lat2+", "+long2+", "+heading+"deg");
-    }
-    else if (deltaW==0 && deltaH<0)
-    {
-        //long2=long1
-        lat2= (Math.asin(Math.sin(lat1)*Math.cos(distance/R) + Math.cos(lat1)*Math.sin(distance/R)*Math.cos(initialHeading)));//*180/Math.PI;
-        long2 = long1;//*180/Math.PI;
-        heading = initialHeading*180/Math.PI;
-        
-        alert("Case 2: "+lat2+", "+long2+", "+heading+"deg");
-    }
-    else if (deltaW==0 && deltaH>0)
-    {
-        //long2=long1
-        lat2= (Math.asin(Math.sin(lat1)*Math.cos(distance/R) + Math.cos(lat1)*Math.sin(distance/R)*Math.cos(initialHeading+Math.PI)));//*180/Math.PI;
-        long2=long1;//*180/Math.PI;
-        heading = (initialHeading+Math.PI)*180/Math.PI;
-
-        alert("Case 3: "+lat2+", "+long2+", "+heading+"deg");
-    }
-    else if (deltaW>0 && deltaH==0)
-    {
-        //lat2=lat1;
-        long2 = (long1 + Math.atan2(Math.sin(initialHeading+(Math.PI/2))*Math.sin(distance/R)*Math.cos(lat1), Math.cos(distance/R)-Math.sin(lat1)*Math.sin(lat1)));//*180/Math.PI;
-        lat2 = lat1;//*180/Math.PI;
-        heading=(initialHeading+Math.PI/2)*180/Math.PI;
-        
-        alert("Case 4: "+lat2+", "+long2+", "+heading+"deg"); 
-    }
-    else if (deltaW<0 && deltaH==0)
-    {
-        //lat2=lat1;
-        long2 = (long1 + Math.atan2(Math.sin(initialHeading+(3*Math.PI/2))*Math.sin(distance/R)*Math.cos(lat1), Math.cos(distance/R)-Math.sin(lat1)*Math.sin(lat1)));//*180/Math.PI;
-        lat2 = lat1;//*180/Math.PI;
-        heading = (initialHeading+3*Math.PI/2)*180/Math.PI;
-
-        alert("Case 5: "+lat2+", "+long2+", "+heading+"deg");
-    }
-    else if (deltaW>0 && deltaH<0)
-    {   
-        heading = initialHeading + (Math.atan(deltaW/(-1*deltaH))); //*Math.PI/180;
-        computeNewCoordinates(lat1,long1,distance,R,heading);
-        headingDeg = heading*180/Math.PI;
-        
-        alert("Case 6: "+lat2+", "+long2+", "+headingDeg+" deg");
-    }
-    else if (deltaW>0 && deltaH>0)
-    {
-        heading = initialHeading + Math.PI - (Math.atan(deltaW/deltaH));    //*Math.PI/180;
-        computeNewCoordinates(lat1,long1,distance,R,heading);
-        headingDeg = heading*180/Math.PI;
-        
-        alert("Case 7: "+lat2+", "+long2+", "+headingDeg+" deg");
-    }
-    else if (deltaW<0 && deltaH>0)
-    {
-        heading = initialHeading + Math.PI + (Math.atan((-1*deltaW)/deltaH));   //*Math.PI/180;
-        computeNewCoordinates(lat1,long1,distance,R,heading);
-        headingDeg = heading*180/Math.PI;
-        
-        alert("Case 8: "+lat2+", "+long2+", "+headingDeg+" deg");
-    }
-    else
-    {
-        heading = initialHeading + 2*Math.PI - (Math.atan(deltaW/deltaH));  //*Math.PI/180;
-        computeNewCoordinates(lat1,long1,distance,R,heading);
-        headingDeg = heading*180/Math.PI;
-
-        alert("Case 9: "+lat2+", "+long2+", "+headingDeg+" deg");
-    }
+    computeGPSCoordFromCase();
     storePTClickedCoords(); 
 }
-
 
 /*************************************************************************************************
 
@@ -1063,7 +915,6 @@ function octagonExtraDistances()
 
 *************************************************************************************************/
 // Master function to check which shape the area is based on number of clicks
-
 function calculateArea()
 {
     if(groundDistBetweenPoints.length==3)
@@ -1227,7 +1078,6 @@ function octagonArea()
                 Function for calculating the centroid of selected target area
 
 *************************************************************************************************/
-
 function calculateCentroidCoords()
 {
     while(p<GPSClickedCoords.length)
@@ -1242,10 +1092,6 @@ function calculateCentroidCoords()
     centroidLong=sumLong/(GPSClickedCoords.length/2);//*180/Math.PI; // convert to deg
     alert(centroidLat+", "+centroidLong);
 }
-
-
-
-
 
 // Supposed to be a simpler algorithm but its broken
 // var ss;
