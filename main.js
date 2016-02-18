@@ -57,23 +57,22 @@ var counter1=0; // Latitude index counter (even numbers)
 var counter2=1; // Longitude index counter (odd numbers)
 
 var groundDistBetweenPoints = new Array(); // Stores the calculated length between two GPS coordinates in meters
-var counter3=0; // counter for array groundDistBetweenPoints
+var counter3=0; // Counter for groundDistBetweenPoints for the distances connecting clicks
+var checkLength; // Number of points clicked
+var index_dist; // Counter for groundDistBetween Points for the extra distances required for area calculation
+var latCoordIndex=4; // Starting latitudeCoord in GPSClickedCoords array for additional distances (2 gets added to this index for every extra distance calculated)
 
 // Variables for calculating the shape area (Heron's Function)
-var s1; // Semiperimeter triangle 1
-var s2; // Semiperimeter triangle 2
-var s3; // Semiperimeter triangle 3
-var s4; // Semiperimeter triangle 4
-var s5; // Semiperimeter triangle 5
-var s6; // Semiperimeter triangle 6
+var s= new Array(); // Contains the semiperimeter length for each component triangles
+var countSemiPerim=0; // Indicates current component triangle
+var AreaTotal; // Total area of the shape in m^2
+var A = new Array() // Areas of each ofthe component triangles
 
-var A; // Total area of shape in m^2
-var A1; // Area of triangle 1
-var A2; // Area of triangle 2
-var A3; // Area of triangle 3
-var A4; // Area of triangle 4
-var A5; // Area of triangle 5
-var A6; // Area of triangle 6
+// Variables for component triangle areas
+var numIterations; // Total number of triangles in case 2 for the given shape (#component triangles-2)
+var dist_counter=2; // Starting index for these special component triangles
+var count_componentTriangles=0; // Current number of component triangles
+var numPoints; // Sets the second and third indicies in the area calculation (starts at GPSClickedCoords.length/2 corresponding to the first additional calculated legth)
 
 // Variables for calculating centroid (uses lat and long averages)
 var centroidLat=0; // Centroid Latitude Coordinate in deg
@@ -100,6 +99,10 @@ var countQR=0; // index for QRCodeCoords
 var setWidth; // Calculated width of selected area of image 
 var setHeight; // Calculated height of selected area of image
 var QRCodeScannedData; // Stores the text data recieved after decoding the QR Code
+
+//Variables for getting metadata from image
+var meta; // Gets the metadata string from the image
+var meta_Data = new Array(); // Splits the string into component strings, isolating each data point into each index of the array 
 
 // For metadata read from .csv file
 var address4; // Address for first text file corresponding to loaded image
@@ -138,10 +141,19 @@ function resetVariables()
     countPT=0;
     countPTIndex=0;
 
-    A=0;
+    latCoordIndex=4;
+
+    s=[];
+    A=[];
+    AreaTotal=0;
+    countSemiPerim=0;
+    dist_counter=2;
+    count_componentTriangles=0;
 
     QRCodeCoords=[];
     countQR=0;
+
+    meta_Data=[];
     //QRCodeScannedData=0; Will display error code when this is commented out
 }
 /*************************************************************************************************
@@ -197,8 +209,9 @@ document.getElementById("Load").onclick = function loadNewImage()
         if (error)
         console.log("Error: "+error.message);
         else
-            console.log(exifData); // Displays all EXIF metadata for the image
-            console.log(exifData.exif.UserComment.toString()); // displays text attached to image ie. alititude,latitiude etc...
+            meta = exifData.exif.UserComment.toString();
+            meta_Data = meta.split(" "); // 0 = Lat, 1=Long, 2=Altitude, 3=Heading, 4=Timestamp (optional)
+            console.log(meta_Data);
         });
     });
 
@@ -448,9 +461,9 @@ function removeEventListeners()
 
 function data2Screen()
 {
-    if (typeof A !== 'undefined' && A !== null && A!==0)
+    if (typeof AreaTotal !== 'undefined' && AreaTotal !== null && AreaTotal !==0)
     {
-        document.getElementById("AreaCalc").innerHTML = A+" m^2";
+        document.getElementById("AreaCalc").innerHTML = AreaTotal+" m^2";
     }
 
     if (typeof centroidLat>0 || centroidLat<0 && centroidLat !==0 && typeof centroidLong>0 || centroidLong<0 && centroidLong!==0)
@@ -544,6 +557,14 @@ function metadata2Variables()
     altitude=imageData[2]; // recieves in meters
     initialHeading=imageData[3]*Math.PI/180; // converts deg to rad
     timestamp=imageData[4];
+
+    // Assigning metadata read from image
+
+    // lat1=meta_Data[0]*Math.PI/180; // converts deg to rad
+    // long1=meta_Data[1]*Math.PI/180; // converts deg to rad
+    // altitude=meta_Data[2]; // recieves in meters
+    // initialHeading=meta_Data[3]*Math.PI/180; // converts deg to rad
+    // timestamp=meta_Data[4];
 }
 
 function transferQRCodeImage()
@@ -819,96 +840,29 @@ function distBetweenPoints()
             Computes additional distances needed for calculating area
 
 *************************************************************************************************/
-function squareExtraDistances()
+function computeExtraDistances()
 {
-    a = Math.pow(Math.sin((GPSClickedCoords[4]-GPSClickedCoords[0])/2),2)+Math.cos(GPSClickedCoords[4])*Math.cos(GPSClickedCoords[0])*Math.pow(Math.sin(GPSClickedCoords[5]-GPSClickedCoords[1])/2,2);
-    c = 2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-    groundDistBetweenPoints[4]=R*c*1000;
-    //alert("Extra length: "+groundDistBetweenPoints[4]);
+    checkLength=GPSClickedCoords.length/2;
+    index_dist=GPSClickedCoords.length/2;
+
+    if(checkLength==3)
+    {}
+    else
+    {
+        for(var i=0;i<(checkLength-3);i++)
+        {
+            a = Math.pow(Math.sin((GPSClickedCoords[latCoordIndex]-GPSClickedCoords[0])/2),2)+Math.cos(GPSClickedCoords[latCoordIndex])*Math.cos(GPSClickedCoords[0])*Math.pow(Math.sin(GPSClickedCoords[latCoordIndex+1]-GPSClickedCoords[1])/2,2);
+            c = 2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+            groundDistBetweenPoints[index_dist]=R*c*1000;
+
+            //alert("Extra length: "+groundDistBetweenPoints[index_dist]);
+            //alert("index is: "+latCoordIndex);
+
+            latCoordIndex=latCoordIndex+2;
+            index_dist++;
+        }
+    }
 }
-
-function pentagonExtraDistances()
-{
-    a = Math.pow(Math.sin((GPSClickedCoords[4]-GPSClickedCoords[0])/2),2)+Math.cos(GPSClickedCoords[4])*Math.cos(GPSClickedCoords[0])*Math.pow(Math.sin(GPSClickedCoords[5]-GPSClickedCoords[1])/2,2);
-    c = 2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-    groundDistBetweenPoints[5]=R*c*1000;
-    //alert("First extra length: "+groundDistBetweenPoints[5]);
-
-    a = Math.pow(Math.sin((GPSClickedCoords[6]-GPSClickedCoords[0])/2),2)+Math.cos(GPSClickedCoords[6])*Math.cos(GPSClickedCoords[0])*Math.pow(Math.sin(GPSClickedCoords[7]-GPSClickedCoords[1])/2,2);
-    c = 2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-    groundDistBetweenPoints[6]=R*c*1000;
-    //alert("Second extra length: "+groundDistBetweenPoints[6]);
-}
-
-function hexagonExtraDistances()
-{
-    a = Math.pow(Math.sin((GPSClickedCoords[4]-GPSClickedCoords[0])/2),2)+Math.cos(GPSClickedCoords[4])*Math.cos(GPSClickedCoords[0])*Math.pow(Math.sin(GPSClickedCoords[5]-GPSClickedCoords[1])/2,2);
-    c = 2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-    groundDistBetweenPoints[6]=R*c*1000;
-    //alert("First extra length: "+groundDistBetweenPoints[6]);
-
-    a = Math.pow(Math.sin((GPSClickedCoords[10]-GPSClickedCoords[6])/2),2)+Math.cos(GPSClickedCoords[10])*Math.cos(GPSClickedCoords[6])*Math.pow(Math.sin(GPSClickedCoords[11]-GPSClickedCoords[7])/2,2);
-    c = 2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-    groundDistBetweenPoints[7]=R*c*1000;
-    //alert("Second extra length: "+groundDistBetweenPoints[7]);
-
-    a = Math.pow(Math.sin((GPSClickedCoords[6]-GPSClickedCoords[0])/2),2)+Math.cos(GPSClickedCoords[6])*Math.cos(GPSClickedCoords[0])*Math.pow(Math.sin(GPSClickedCoords[7]-GPSClickedCoords[1])/2,2);
-    c = 2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-    groundDistBetweenPoints[8]=R*c*1000;
-    //alert("Third extra length: "+groundDistBetweenPoints[8]);
-}
-
-function heptagonExtraDistances()
-{
-    a = Math.pow(Math.sin((GPSClickedCoords[6]-GPSClickedCoords[2])/2),2)+Math.cos(GPSClickedCoords[6])*Math.cos(GPSClickedCoords[2])*Math.pow(Math.sin(GPSClickedCoords[7]-GPSClickedCoords[3])/2,2);
-    c = 2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-    groundDistBetweenPoints[7]=R*c*1000;
-    //alert("First extra length: "+groundDistBetweenPoints[7]);
-
-    a = Math.pow(Math.sin((GPSClickedCoords[12]-GPSClickedCoords[8])/2),2)+Math.cos(GPSClickedCoords[12])*Math.cos(GPSClickedCoords[8])*Math.pow(Math.sin(GPSClickedCoords[13]-GPSClickedCoords[9])/2,2);
-    c = 2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-    groundDistBetweenPoints[8]=R*c*1000;
-    //alert("Second extra length: "+groundDistBetweenPoints[8]);
-
-    a = Math.pow(Math.sin((GPSClickedCoords[6]-GPSClickedCoords[0])/2),2)+Math.cos(GPSClickedCoords[6])*Math.cos(GPSClickedCoords[0])*Math.pow(Math.sin(GPSClickedCoords[7]-GPSClickedCoords[1])/2,2);
-    c = 2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-    groundDistBetweenPoints[9]=R*c*1000;
-    //alert("Third extra length: "+groundDistBetweenPoints[9]);
-
-    a = Math.pow(Math.sin((GPSClickedCoords[8]-GPSClickedCoords[0])/2),2)+Math.cos(GPSClickedCoords[8])*Math.cos(GPSClickedCoords[0])*Math.pow(Math.sin(GPSClickedCoords[9]-GPSClickedCoords[1])/2,2);
-    c = 2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-    groundDistBetweenPoints[10]=R*c*1000;
-    //alert("Fourth extra length: "+groundDistBetweenPoints[10]);
-}
-
-function octagonExtraDistances()
-{
-    a = Math.pow(Math.sin((GPSClickedCoords[6]-GPSClickedCoords[0])/2),2)+Math.cos(GPSClickedCoords[6])*Math.cos(GPSClickedCoords[0])*Math.pow(Math.sin(GPSClickedCoords[7]-GPSClickedCoords[1])/2,2);
-    c = 2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-    groundDistBetweenPoints[8]=R*c*1000;
-    //alert("First extra length: "+groundDistBetweenPoints[8]);
-
-    a = Math.pow(Math.sin((GPSClickedCoords[14]-GPSClickedCoords[8])/2),2)+Math.cos(GPSClickedCoords[14])*Math.cos(GPSClickedCoords[8])*Math.pow(Math.sin(GPSClickedCoords[15]-GPSClickedCoords[9])/2,2);
-    c = 2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-    groundDistBetweenPoints[9]=R*c*1000;
-    //alert("Second extra length: "+groundDistBetweenPoints[9]);
-
-    a = Math.pow(Math.sin((GPSClickedCoords[6]-GPSClickedCoords[2])/2),2)+Math.cos(GPSClickedCoords[6])*Math.cos(GPSClickedCoords[2])*Math.pow(Math.sin(GPSClickedCoords[7]-GPSClickedCoords[3])/2,2);
-    c = 2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-    groundDistBetweenPoints[10]=R*c*1000;
-    // alert("Third extra length: "+groundDistBetweenPoints[10]);
-
-    a = Math.pow(Math.sin((GPSClickedCoords[12]-GPSClickedCoords[8])/2),2)+Math.cos(GPSClickedCoords[12])*Math.cos(GPSClickedCoords[8])*Math.pow(Math.sin(GPSClickedCoords[13]-GPSClickedCoords[9])/2,2);
-    c = 2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-    groundDistBetweenPoints[11]=R*c*1000;
-    //alert("Fourth extra length: "+groundDistBetweenPoints[11]);
-
-    a = Math.pow(Math.sin((GPSClickedCoords[8]-GPSClickedCoords[0])/2),2)+Math.cos(GPSClickedCoords[8])*Math.cos(GPSClickedCoords[0])*Math.pow(Math.sin(GPSClickedCoords[9]-GPSClickedCoords[1])/2,2);
-    c = 2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-    groundDistBetweenPoints[12]=R*c*1000;
-    //alert("Fifth extra length: "+groundDistBetweenPoints[12]);
-}
-
 /*************************************************************************************************
 
                 Function for Computing the Area of the Target
@@ -947,132 +901,126 @@ function calculateArea()
         alert("octagon case");
         octagonArea();
     }
-    alert("Area is "+A);
+    alert("Area is "+AreaTotal);
 }
 
 // Component functions for calculating the area of each shape
 
 function triangleArea()
 {
-    s1=(groundDistBetweenPoints[0]+groundDistBetweenPoints[1]+groundDistBetweenPoints[2])/2;
-    A=Math.sqrt(s1*(s1-groundDistBetweenPoints[0])*(s1-groundDistBetweenPoints[1])*(s1-groundDistBetweenPoints[2]));
+    s[1]=(groundDistBetweenPoints[0]+groundDistBetweenPoints[1]+groundDistBetweenPoints[2])/2;
+    AreaTotal=Math.sqrt(s[1]*(s[1]-groundDistBetweenPoints[0])*(s[1]-groundDistBetweenPoints[1])*(s[1]-groundDistBetweenPoints[2]));
+
 }
 
 function squareArea()
 {
-    squareExtraDistances();
+    computeExtraDistances();
 
-    s1=(groundDistBetweenPoints[0]+groundDistBetweenPoints[1]+groundDistBetweenPoints[4])/2;
-    A1=Math.sqrt(s1*(s1-groundDistBetweenPoints[0])*(s1-groundDistBetweenPoints[1])*(s1-groundDistBetweenPoints[4]));
+    s[1]=(groundDistBetweenPoints[0]+groundDistBetweenPoints[1]+groundDistBetweenPoints[4])/2;
+    A[1]=Math.sqrt(s[1]*(s[1]-groundDistBetweenPoints[0])*(s[1]-groundDistBetweenPoints[1])*(s[1]-groundDistBetweenPoints[4]));
     //alert("Area of first triangle "+A1);
 
-    s2=(groundDistBetweenPoints[2]+groundDistBetweenPoints[3]+groundDistBetweenPoints[4])/2;
-    A2=Math.sqrt(s2*(s2-groundDistBetweenPoints[2])*(s2-groundDistBetweenPoints[3])*(s2-groundDistBetweenPoints[4]));
+    s[2]=(groundDistBetweenPoints[2]+groundDistBetweenPoints[3]+groundDistBetweenPoints[4])/2;
+    A[2]=Math.sqrt(s[2]*(s[2]-groundDistBetweenPoints[2])*(s[2]-groundDistBetweenPoints[3])*(s[2]-groundDistBetweenPoints[4]));
     //alert("Area of second triangle "+A2);
 
-    A=A1+A2;
-} 
+    AreaTotal = A.reduce(function(pv, cv) { return pv + cv; }, 0);
+}
 
 function pentagonArea()
 {
-    pentagonExtraDistances();
+    computeExtraDistances();
 
-    s1=(groundDistBetweenPoints[0]+groundDistBetweenPoints[1]+groundDistBetweenPoints[5])/2;
-    A1=Math.sqrt(s1*(s1-groundDistBetweenPoints[0])*(s1-groundDistBetweenPoints[1])*(s1-groundDistBetweenPoints[5]));
+    s[1]=(groundDistBetweenPoints[0]+groundDistBetweenPoints[1]+groundDistBetweenPoints[5])/2;
+    A[1]=Math.sqrt(s[1]*(s[1]-groundDistBetweenPoints[0])*(s[1]-groundDistBetweenPoints[1])*(s[1]-groundDistBetweenPoints[5]));
     //alert("Area of first triangle "+A1);
+    
+    areaCalcCase2();
 
-    s2=(groundDistBetweenPoints[2]+groundDistBetweenPoints[5]+groundDistBetweenPoints[6])/2;
-    A2=Math.sqrt(s2*(s2-groundDistBetweenPoints[2])*(s2-groundDistBetweenPoints[5])*(s2-groundDistBetweenPoints[6]));
-    //alert("Area of second triangle "+A2)
-
-    s3=(groundDistBetweenPoints[3]+groundDistBetweenPoints[4]+groundDistBetweenPoints[6])/2;
-    A3=Math.sqrt(s3*(s3-groundDistBetweenPoints[3])*(s3-groundDistBetweenPoints[4])*(s3-groundDistBetweenPoints[6]));
+    s[3]=(groundDistBetweenPoints[3]+groundDistBetweenPoints[4]+groundDistBetweenPoints[6])/2;
+    A[3]=Math.sqrt(s[3]*(s[3]-groundDistBetweenPoints[3])*(s[3]-groundDistBetweenPoints[4])*(s[3]-groundDistBetweenPoints[6]));
     //alert("Area of third triangle "+A3);
 
-    A=A1+A2+A3;
+    AreaTotal = A.reduce(function(pv, cv) { return pv + cv; }, 0);    
 }
 
-function hexagonArea()
+function hexagonArea() // yields same area as hexagonArea1
 {
-    hexagonExtraDistances();
+    computeExtraDistances();
 
-    s1=(groundDistBetweenPoints[0]+groundDistBetweenPoints[1]+groundDistBetweenPoints[6])/2;
-    A1=Math.sqrt(s1*(s1-groundDistBetweenPoints[0])*(s1-groundDistBetweenPoints[1])*(s1-groundDistBetweenPoints[6]));
+    s[1]=(groundDistBetweenPoints[0]+groundDistBetweenPoints[1]+groundDistBetweenPoints[6])/2;
+    A[1]=Math.sqrt(s[1]*(s[1]-groundDistBetweenPoints[0])*(s[1]-groundDistBetweenPoints[1])*(s[1]-groundDistBetweenPoints[6]));
     //alert("Area of first triangle "+A1);
 
-    s2=(groundDistBetweenPoints[3]+groundDistBetweenPoints[4]+groundDistBetweenPoints[7])/2;
-    A2=Math.sqrt(s2*(s2-groundDistBetweenPoints[3])*(s2-groundDistBetweenPoints[4])*(s2-groundDistBetweenPoints[7]));
-    //alert("Area of second triangle "+A2);
+    areaCalcCase2();
 
-    s3=(groundDistBetweenPoints[5]+groundDistBetweenPoints[7]+groundDistBetweenPoints[8])/2;
-    A3=Math.sqrt(s3*(s3-groundDistBetweenPoints[5])*(s3-groundDistBetweenPoints[7])*(s3-groundDistBetweenPoints[8]));
-    //alert("Area of third triangle "+A3);
+    s[4]=(groundDistBetweenPoints[4]+groundDistBetweenPoints[5]+groundDistBetweenPoints[8])/2;
+    A[4]=Math.sqrt(s[4]*(s[4]-groundDistBetweenPoints[4])*(s[4]-groundDistBetweenPoints[5])*(s[4]-groundDistBetweenPoints[8]));
+    //alert("Area of fourth triangle "+A44);
 
-    s4=(groundDistBetweenPoints[2]+groundDistBetweenPoints[6]+groundDistBetweenPoints[8])/2;
-    A4=Math.sqrt(s4*(s4-groundDistBetweenPoints[2])*(s4-groundDistBetweenPoints[6])*(s4-groundDistBetweenPoints[8]));
-    //alert("Area of fourth triangle "+A4);
-
-    A=A1+A2+A3+A4;
+    AreaTotal = A.reduce(function(pv, cv) { return pv + cv; }, 0);
 }
 
 function heptagonArea()
 {
-    heptagonExtraDistances();
+    computeExtraDistances();
 
-    s1=(groundDistBetweenPoints[1]+groundDistBetweenPoints[2]+groundDistBetweenPoints[7])/2;
-    A1=Math.sqrt(s1*(s1-groundDistBetweenPoints[1])*(s1-groundDistBetweenPoints[2])*(s1-groundDistBetweenPoints[7]));
+    s[1]=(groundDistBetweenPoints[0]+groundDistBetweenPoints[1]+groundDistBetweenPoints[7])/2;
+    A[1]=Math.sqrt(s[1]*(s[1]-groundDistBetweenPoints[0])*(s[1]-groundDistBetweenPoints[1])*(s[1]-groundDistBetweenPoints[7]));
     //alert("Area of first triangle "+A1);
+   
+    areaCalcCase2();
 
-    s2=(groundDistBetweenPoints[4]+groundDistBetweenPoints[5]+groundDistBetweenPoints[8])/2;
-    A2=Math.sqrt(s2*(s2-groundDistBetweenPoints[4])*(s2-groundDistBetweenPoints[5])*(s2-groundDistBetweenPoints[8]));
-    //alert("Area of second triangle "+A2);
-
-    s3=(groundDistBetweenPoints[0]+groundDistBetweenPoints[7]+groundDistBetweenPoints[9])/2;
-    A3=Math.sqrt(s3*(s3-groundDistBetweenPoints[0])*(s3-groundDistBetweenPoints[7])*(s3-groundDistBetweenPoints[9]));
-    //alert("Area of third triangle "+A3);
-
-    s4=(groundDistBetweenPoints[6]+groundDistBetweenPoints[8]+groundDistBetweenPoints[10])/2;
-    A4=Math.sqrt(s4*(s4-groundDistBetweenPoints[6])*(s4-groundDistBetweenPoints[8])*(s4-groundDistBetweenPoints[10]));
-    //alert("Area of fourth triangle "+A4);
-
-    s5=(groundDistBetweenPoints[3]+groundDistBetweenPoints[9]+groundDistBetweenPoints[10])/2;
-    A5=Math.sqrt(s5*(s5-groundDistBetweenPoints[3])*(s5-groundDistBetweenPoints[9])*(s5-groundDistBetweenPoints[10]));
+    s[5]=(groundDistBetweenPoints[5]+groundDistBetweenPoints[6]+groundDistBetweenPoints[10])/2;
+    A[5]=Math.sqrt(s[5]*(s[5]-groundDistBetweenPoints[5])*(s[5]-groundDistBetweenPoints[6])*(s[5]-groundDistBetweenPoints[10]));
     //alert("Area of fifth triangle "+A5);
 
-    A=A1+A2+A3+A4+A5;
+    AreaTotal = A.reduce(function(pv, cv) { return pv + cv; }, 0);
 }
 
 function octagonArea()
 {
-    octagonExtraDistances();
+    computeExtraDistances();
 
-    s1=(groundDistBetweenPoints[1]+groundDistBetweenPoints[2]+groundDistBetweenPoints[10])/2;
-    A1=Math.sqrt(s1*(s1-groundDistBetweenPoints[1])*(s1-groundDistBetweenPoints[2])*(s1-groundDistBetweenPoints[10]));
+    s[1]=(groundDistBetweenPoints[0]+groundDistBetweenPoints[1]+groundDistBetweenPoints[8])/2;
+    A[1]=Math.sqrt(s[1]*(s[1]-groundDistBetweenPoints[0])*(s[1]-groundDistBetweenPoints[1])*(s[1]-groundDistBetweenPoints[8]));
     //alert("Area of first triangle "+A1);
+    
+    areaCalcCase2(); 
 
-    s2=(groundDistBetweenPoints[4]+groundDistBetweenPoints[5]+groundDistBetweenPoints[11])/2;
-    A2=Math.sqrt(s2*(s2-groundDistBetweenPoints[4])*(s2-groundDistBetweenPoints[5])*(s2-groundDistBetweenPoints[11]));
-    //alert("Area of second triangle "+A2);
-
-    s3=(groundDistBetweenPoints[0]+groundDistBetweenPoints[8]+groundDistBetweenPoints[10])/2;
-    A3=Math.sqrt(s3*(s3-groundDistBetweenPoints[0])*(s3-groundDistBetweenPoints[8])*(s3-groundDistBetweenPoints[10]));
-    //alert("Area of third triangle "+A3);
-
-    s4=(groundDistBetweenPoints[6]+groundDistBetweenPoints[9]+groundDistBetweenPoints[11])/2;
-    A4=Math.sqrt(s4*(s4-groundDistBetweenPoints[6])*(s4-groundDistBetweenPoints[9])*(s4-groundDistBetweenPoints[11]));
-    //alert("Area of fourth triangle "+A4);
-
-    s5=(groundDistBetweenPoints[3]+groundDistBetweenPoints[8]+groundDistBetweenPoints[12])/2;
-    A5=Math.sqrt(s5*(s5-groundDistBetweenPoints[3])*(s5-groundDistBetweenPoints[8])*(s5-groundDistBetweenPoints[12]));
-    //alert("Area of fifth triangle "+A5);
-
-    s6=(groundDistBetweenPoints[7]+groundDistBetweenPoints[9]+groundDistBetweenPoints[12])/2;
-    A6=Math.sqrt(s6*(s6-groundDistBetweenPoints[7])*(s6-groundDistBetweenPoints[9])*(s6-groundDistBetweenPoints[12]));
+    s[6]=(groundDistBetweenPoints[6]+groundDistBetweenPoints[7]+groundDistBetweenPoints[12])/2;
+    A[6]=Math.sqrt(s[6]*(s[6]-groundDistBetweenPoints[6])*(s[6]-groundDistBetweenPoints[7])*(s[6]-groundDistBetweenPoints[12]));
     //alert("Area of sixth triangle "+A6);
 
-    A=A1+A2+A3+A4+A5+A6;
+    AreaTotal = A.reduce(function(pv, cv) { return pv + cv; }, 0);
 }
 
+
+function areaCalcCase2()
+{
+    numIterations;
+    dist_counter=2;
+    count_componentTriangles=0;
+    numPoints=GPSClickedCoords.length/2;
+    
+    if(numPoints==3 || numPoints==4) {}
+
+    else
+    {
+        numIterations=numPoints-4;
+    }
+    
+    while(count_componentTriangles<numIterations)
+        {
+            s[dist_counter]=(groundDistBetweenPoints[dist_counter]+groundDistBetweenPoints[numPoints]+groundDistBetweenPoints[numPoints+1])/2;
+            A[dist_counter]=Math.sqrt(s[dist_counter]*(s[dist_counter]-groundDistBetweenPoints[dist_counter])*(s[dist_counter]-groundDistBetweenPoints[numPoints])*(s[dist_counter]-groundDistBetweenPoints[numPoints+1]));
+                        
+            dist_counter++;
+            numPoints++;
+            count_componentTriangles++;
+        }
+}
 /*************************************************************************************************
 
                 Function for calculating the centroid of selected target area
@@ -1092,80 +1040,3 @@ function calculateCentroidCoords()
     centroidLong=sumLong/(GPSClickedCoords.length/2);//*180/Math.PI; // convert to deg
     alert(centroidLat+", "+centroidLong);
 }
-
-// Supposed to be a simpler algorithm but its broken
-// var ss;
-// var AA = new Array();
-// var AreaTotal;
-
-// function computeArea()
-// {
-//     computeExtraDistances();
-
-//     var countArea = GPSClickedCoords.length/2;
-//     var countCase1=countArea;
-//     var countCase21=countArea;
-//     var countCase22=countArea+1;
-//     var countCase23=2;
-//     var countCase3=countArea-1;
-//     var caseCounter=0;
-
-//     for (var i=0;i<(countArea-2);i++)
-//     {
-        
-//         if (countArea==3)
-//         {
-//             alert("Case 0: Single Triangle");
-//             ss= (groundDistBetweenPoints[0]+groundDistBetweenPoints[1]+groundDistBetweenPoints[2])/2;
-//             AA[i]= Math.sqrt(ss*(ss-groundDistBetweenPoints[0])*(ss-groundDistBetweenPoints[1])*(ss-groundDistBetweenPoints[2]));
-//             i=99;
-//         }
-//         else if (caseCounter==0)
-//         {   
-//             alert("Case 1: First Triangle");
-//             ss= (groundDistBetweenPoints[0]+groundDistBetweenPoints[1]+groundDistBetweenPoints[countCase1])/2;
-//             AA[i]= Math.sqrt(ss*(ss-groundDistBetweenPoints[0])*(ss-groundDistBetweenPoints[1])*(ss-groundDistBetweenPoints[countCase1]));           
-//         }
-//         else if (caseCounter>0 && caseCounter==(countArea-3))
-//         {
-//             alert("Case 3: Last Triangle");
-//             ss= (groundDistBetweenPoints[countCase3]+groundDistBetweenPoints[countCase3-1]+groundDistBetweenPoints[numberOfPoints])/2;
-//             AA[i]= Math.sqrt(ss*(ss-groundDistBetweenPoints[countCase3])*(ss-groundDistBetweenPoints[countCase3-1])*(ss-groundDistBetweenPoints[numberOfPoints]));
-//         }
-//         else if (caseCounter>0 && caseCounter<(countArea-3))
-//         {
-//             alert("Case 2: Middle Triangles");
-//             ss= (groundDistBetweenPoints[countCase23]+groundDistBetweenPoints[countCase21]+groundDistBetweenPoints[countCase22])/2;
-//             AA[i]= Math.sqrt(ss*(ss-groundDistBetweenPoints[countCase23])*(ss-groundDistBetweenPoints[countCase21])*(ss-groundDistBetweenPoints[countCase22]));
-//             countCase21++;
-//             countCase22++;
-//             countCase23++;
-//         }
-//         caseCounter++;
-//     }
-//     AreaTotal = AA.reduce(function(pv, cv) { return pv + cv; }, 0);
-//     alert("Way2: "+AreaTotal);
-// }
-
-// var numberOfPoints;
-
-// function computeExtraDistances()
-// {
-//     numberOfPoints = GPSClickedCoords.length/2;
-//     var anotherCounter = numberOfPoints;
-//     alert(numberOfPoints);
-
-//     if (numberOfPoints==3)
-//     {}
-//     else
-//     {
-//         for (var i=2;i<(numberOfPoints-1);i++)
-//         {
-//             a = Math.pow(Math.sin((GPSClickedCoords[i]-GPSClickedCoords[0])/2),2)+Math.cos(GPSClickedCoords[i])*Math.cos(GPSClickedCoords[0])*Math.pow(Math.sin(GPSClickedCoords[i+1]-GPSClickedCoords[1])/2,2);            
-//             c = 2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-//             groundDistBetweenPoints[anotherCounter]=R*c*1000;
-//             alert("Extra distance of: "+groundDistBetweenPoints[anotherCounter]);
-//             anotherCounter++;        
-//         }
-//     }
-// }
